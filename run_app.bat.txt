@@ -1,0 +1,16 @@
+@echo off
+echo ===============================
+echo Iniciando app BonoRepro
+echo ===============================
+
+:: Ir a la carpeta del proyecto
+cd /d "D:\Code\BonoRepro"
+
+:: Activar entorno virtual
+call "D:\Code\venv\Scripts\activate.bat"
+
+:: Ejecutar Streamlit
+python -m streamlit run app.py
+
+:: Mantener ventana abierta
+pause
