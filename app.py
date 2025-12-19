@@ -229,11 +229,10 @@ if archivo_dni and archivo_base:
         key="data_editor_tabla"
     )
 
-    # --- NUEVO BOTÓN PARA GUARDAR CAMBIOS ---
+    # --- BOTÓN PARA GUARDAR CAMBIOS SIN ERROR ---
     if st.button("💾 Actualizar tabla 💰 Resultado final"):
         st.session_state.tabla = st.session_state.df_edit.copy()
         st.success("✅ Tabla actualizada")
-        st.experimental_rerun()
 
     # =========================
     # CÁLCULO DE PAGOS
