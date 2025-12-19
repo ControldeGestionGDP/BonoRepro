@@ -23,7 +23,7 @@ if not st.session_state.ingresar:
         <div style='text-align:center; padding-top:100px'>
             <h1>🐔 BONO REPRODUCTORAS GDP</h1>
             <h3>Sistema de cálculo y distribución de bonos</h3>
-            <p style="color:gray;">Uso interno corporativo</p>
+            <p style="color:gray;">Desarrollado por Gerencia de Control de Gestión</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -234,3 +234,4 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
