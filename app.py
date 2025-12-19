@@ -1,81 +1,117 @@
 import streamlit as st
 import pandas as pd
+from io import BytesIO
 
-st.set_page_config(page_title="Cruce de DNI", layout="wide")
-
-st.title("🐔BONO REPRODUCTORAS GDP")
+st.set_page_config(page_title="Liquidación por DNI", layout="wide")
+st.title("📊 Liquidación de Participación por DNI")
 
 st.markdown("""
-**Pasos:**
-1. Subir Excel con lista de DNI  
-2. Subir base maestra de trabajadores  
-3. El sistema cruza, conserva ceros y devuelve el archivo listo  
+**Flujo**
+1. Subir Excel con lista de DNI
+2. Subir base maestra de trabajadores
+3. El sistema cruza y genera estructura lista para cálculo
 """)
 
-# ---------- FUNCION LIMPIAR DNI ----------
-def limpiar_dni(col):
-    return (
-        col.astype(str)
-        .str.replace(".0", "", regex=False)
-        .str.replace("'", "", regex=False)
-        .str.strip()
-        .str.zfill(8)
-    )
+# =========================
+# SUBIDA DE ARCHIVOS
+# =========================
+archivo_dni = st.file_uploader("📄 Excel con lista de DNI", type=["xlsx"])
+archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
 
-# ---------- SUBIR ARCHIVOS ----------
-archivo_dni = st.file_uploader(
-    "📄 Excel con lista de DNI",
-    type=["xlsx"]
-)
+if archivo_dni and archivo_base:
 
-archivo_trabajadores = st.file_uploader(
-    "👥 Base de trabajadores",
-    type=["xlsx"]
-)
+    # =========================
+    # LECTURA SEGURA (DNI TEXTO)
+    # =========================
+    df_dni = pd.read_excel(archivo_dni, dtype=str)
+    df_base = pd.read_excel(archivo_base, dtype=str)
 
-if archivo_dni and archivo_trabajadores:
+    df_dni.columns = df_dni.columns.str.strip()
+    df_base.columns = df_base.columns.str.strip()
 
-    df_dni = pd.read_excel(archivo_dni)
-    df_trab = pd.read_excel(archivo_trabajadores)
+    # =========================
+    # VALIDACIONES
+    # =========================
+    if "DNI" not in df_dni.columns:
+        st.error("❌ El archivo de DNI debe tener la columna DNI")
+        st.stop()
 
-    # ---------- NORMALIZAR DNI ----------
-    df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
-    df_trab["DNI"] = limpiar_dni(df_trab["DNI"])
+    if not {"DNI", "Nombre Completo", "Cargo"}.issubset(df_base.columns):
+        st.error("❌ La base debe tener: DNI, Nombre Completo y Cargo")
+        st.stop()
 
-    # ---------- VALIDACIONES ----------
-    duplicados = df_trab["DNI"].duplicated().sum()
+    # =========================
+    # NORMALIZACIÓN DNI
+    # =========================
+    def limpiar_dni(x):
+        if pd.isna(x):
+            return None
+        x = str(x).replace(".0", "").replace("'", "").strip()
+        return x.zfill(8)
+
+    df_dni["DNI"] = df_dni["DNI"].apply(limpiar_dni)
+    df_base["DNI"] = df_base["DNI"].apply(limpiar_dni)
+
+    # =========================
+    # ELIMINAR DUPLICADOS BASE
+    # =========================
+    duplicados = df_base["DNI"].duplicated().sum()
     if duplicados > 0:
-        st.warning(
-            f"⚠️ Se encontraron {duplicados} DNIs duplicados en la base. "
-            "Se usará el primer registro por DNI."
-        )
-        df_trab = df_trab.drop_duplicates(subset="DNI", keep="first")
+        st.warning(f"⚠️ Se encontraron {duplicados} DNIs duplicados. Se usará el primer registro.")
+        df_base = df_base.drop_duplicates("DNI", keep="first")
 
-    # ---------- CRUCE ----------
-    resultado = df_dni.merge(
-        df_trab,
+    # =========================
+    # CRUCE
+    # =========================
+    df = df_dni.merge(
+        df_base[["DNI", "Nombre Completo", "Cargo"]],
         on="DNI",
         how="left"
     )
 
-    st.success("✅ Cruce realizado correctamente")
+    # =========================
+    # COLUMNAS BASE
+    # =========================
+    df.insert(0, "Estado", "En Proceso")
 
-    # ---------- VISTA PREVIA ----------
-    st.subheader("👀 Vista previa")
-    st.dataframe(resultado.head(10))
+    # =========================
+    # COLUMNAS PARTICIPACIÓN (%)
+    # =========================
+    for col in ["211", "212", "213"]:
+        df[col] = ""
 
-    # ---------- DESCARGA ----------
-    archivo_salida = "resultado_cruce.xlsx"
-    resultado.to_excel(archivo_salida, index=False)
+    # =========================
+    # COLUMNAS FALTAS
+    # =========================
+    for col in ["F_211", "F_212", "F_213"]:
+        df[col] = ""
 
-    with open(archivo_salida, "rb") as f:
-        st.download_button(
-            label="⬇️ Descargar archivo final",
-            data=f,
-            file_name=archivo_salida,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    # =========================
+    # COLUMNAS LIQUIDACIÓN
+    # =========================
+    for col in ["L_211", "L_212", "L_213"]:
+        df[col] = ""
 
+    # =========================
+    # TOTAL
+    # =========================
+    df["TOTAL S/."] = ""
 
+    st.success("✅ Estructura generada correctamente")
+    st.subheader("Vista previa")
+    st.dataframe(df, use_container_width=True)
 
+    # =========================
+    # EXPORTAR
+    # =========================
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
 
+    st.download_button(
+        "📥 Descargar archivo base",
+        data=output,
+        file_name="liquidacion_base.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
