@@ -177,13 +177,15 @@ if archivo_dni and archivo_base:
     if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
 
+    # =========================
+    # REGISTRO POR TRABAJADOR Y LOTE
+    # =========================
     st.subheader("✍️ Registro por trabajador y lote")
     df_edit = st.data_editor(
         st.session_state.tabla,
         use_container_width=True,
         num_rows="fixed"
     )
-    # Guardar cambios del editor en session_state
     st.session_state.tabla = df_edit.copy()
 
     # =========================
@@ -197,11 +199,12 @@ if archivo_dni and archivo_base:
             if dni_eliminar in st.session_state.tabla["DNI"].values:
                 st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"] != dni_eliminar]
                 st.success(f"✅ Trabajador con DNI {dni_eliminar} eliminado")
+                st.experimental_rerun()
             else:
                 st.warning("⚠️ DNI no encontrado en la tabla")
 
     # =========================
-    # BUSCAR TRABAJADOR
+    # BUSCAR Y AGREGAR TRABAJADOR
     # =========================
     st.subheader("🔍 Buscar trabajador por DNI")
     dni_buscar = st.text_input("Ingrese DNI para buscar", key="buscar")
@@ -211,35 +214,24 @@ if archivo_dni and archivo_base:
             encontrado = df_base[df_base["DNI"] == dni_buscar]
             if not encontrado.empty:
                 st.dataframe(encontrado, use_container_width=True)
-                # =========================
-                # BOTÓN AGREGAR A TABLA
-                # =========================
                 if st.button("💾 Agregar trabajador a registro"):
                     nuevo = encontrado.copy()
-                    # Asegurarse de que existan columnas de % y F para cada lote
                     for lote in lotes:
                         if f"%_{lote}" not in nuevo.columns:
                             nuevo[f"%_{lote}"] = 0.0
                         if f"F_{lote}" not in nuevo.columns:
                             nuevo[f"F_{lote}"] = 0
-                    # Agregar a la tabla editable
                     st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
                     st.success(f"✅ Trabajador {dni_buscar} agregado al registro")
+                    st.experimental_rerun()
             else:
                 st.warning("⚠️ DNI no encontrado en la base de trabajadores")
 
     # =========================
-    # CÁLCULO DE PAGOS (MISMA LÓGICA DE EXCEL)
+    # CÁLCULO DE PAGOS
     # =========================
     df_final = st.session_state.tabla.copy()
     columnas_pago = []
-
-    # Asegurarse que todas las columnas de participación y faltas existen
-    for lote in lotes:
-        if f"%_{lote}" not in df_final.columns:
-            df_final[f"%_{lote}"] = 0.0
-        if f"F_{lote}" not in df_final.columns:
-            df_final[f"F_{lote}"] = 0
 
     for lote in lotes:
 
@@ -247,20 +239,16 @@ if archivo_dni and archivo_base:
             cargo = str(row["CARGO"]).upper()
             pct_cargo = reglas.get(cargo, 0)
 
-            monto = config_lotes[lote]["MONTO"]
-            participacion = float(row[f"%_{lote}"]) / 100
-            faltas = row[f"F_{lote}"]
+            # Evitar KeyError si la columna de participación/faltas no existe
+            pct_col = f"%_{lote}"
+            falt_col = f"F_{lote}"
+            participacion = float(row[pct_col]) / 100 if pct_col in row else 0.0
+            faltas = row[falt_col] if falt_col in row else 0
 
             if participacion <= 0:
                 return 0.0
 
-            pago = (
-                pct_cargo *
-                monto *
-                participacion *
-                factor_faltas(faltas)
-            )
-
+            pago = pct_cargo * config_lotes[lote]["MONTO"] * participacion * factor_faltas(faltas)
             return round(pago, 2)
 
         col_pago = f"PAGO_{lote}"
