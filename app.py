@@ -169,13 +169,23 @@ if archivo_dni and archivo_base:
     st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols + otras_cols]
 
     # =========================
+    # SINCRONIZAR df_edit CON TABLA
+    # =========================
+    if "df_edit" not in st.session_state:
+        st.session_state.df_edit = st.session_state.tabla.copy()
+    else:
+        # Asegurarse de que df_edit tenga todas las columnas actuales
+        for col in st.session_state.tabla.columns:
+            if col not in st.session_state.df_edit.columns:
+                st.session_state.df_edit[col] = st.session_state.tabla[col]
+        st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
+
+    # =========================
     # AGREGAR / ELIMINAR TRABAJADOR
     # =========================
     st.subheader("➕ Agregar / ➖ Eliminar trabajador")
-
     with st.form("agregar_trabajador", clear_on_submit=True):
         dni_new = st.text_input("DNI")
-        # PREVISUALIZAR DATOS AL INGRESAR DNI
         nombre_new = ""
         cargo_new = ""
         if dni_new.strip().zfill(8) in df_base["DNI"].values:
@@ -194,6 +204,7 @@ if archivo_dni and archivo_base:
                     nuevo[f"P_{lote}"] = 0.0
                     nuevo[f"F_{lote}"] = 0
                 st.session_state.tabla = pd.concat([st.session_state.tabla,pd.DataFrame([nuevo])],ignore_index=True)
+                st.session_state.df_edit = st.session_state.tabla.copy()
                 st.success("✅ Trabajador agregado")
 
     eliminar_dni = st.text_input("DNI a eliminar")
@@ -201,22 +212,16 @@ if archivo_dni and archivo_base:
         eliminar_dni = eliminar_dni.strip().zfill(8)
         if eliminar_dni in st.session_state.tabla["DNI"].values:
             st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"]!=eliminar_dni]
+            st.session_state.df_edit = st.session_state.tabla.copy()
             st.success("✅ Trabajador eliminado")
 
     # =========================
     # EDITAR PARTICIPACIÓN Y FALTAS
     # =========================
     st.subheader("✍️ Registro por trabajador y lote")
-
-    # Función para actualizar session_state al cambiar el Data Editor
     def actualizar_tabla():
         st.session_state.tabla = st.session_state.df_edit.copy()
 
-    # Copiar la tabla a una variable de session_state para editar
-    if "df_edit" not in st.session_state:
-        st.session_state.df_edit = st.session_state.tabla.copy()
-
-    # Data editor con on_change para guardar cambios al instante
     st.data_editor(
         st.session_state.df_edit,
         use_container_width=True,
