@@ -55,33 +55,19 @@ REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 # =========================
 # DESCUENTO POR FALTAS
 # =========================
-DESCUENTO_FALTAS = {
-    0: 1.00,
-    1: 0.90,
-    2: 0.80,
-    3: 0.70,
-    4: 0.60
-}
+DESCUENTO_FALTAS = {0:1.00,1:0.90,2:0.80,3:0.70,4:0.60}
 
 def factor_faltas(f):
     try:
         f = int(f)
     except:
         return 0.50
-    return DESCUENTO_FALTAS.get(f, 0.50)
+    return DESCUENTO_FALTAS.get(f,0.50)
 
 # =========================
 # APP PRINCIPAL
 # =========================
 st.title("🐔 BONO REPRODUCTORAS GDP")
-st.markdown("""
-**Flujo**
-1. Subir DNIs  
-2. Subir base de trabajadores  
-3. Definir lotes y montos  
-4. Registrar participación y faltas  
-5. Obtener cálculo final del bono  
-""")
 
 # =========================
 # CARGA DE ARCHIVOS
@@ -92,6 +78,7 @@ archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
 if archivo_dni and archivo_base:
     df_dni = pd.read_excel(archivo_dni, dtype=str)
     df_base = pd.read_excel(archivo_base, dtype=str)
+
     df_dni.columns = df_dni.columns.str.strip().str.upper()
     df_base.columns = df_base.columns.str.strip().str.upper()
 
@@ -125,12 +112,13 @@ if archivo_dni and archivo_base:
     # =========================
     # LOTES
     # =========================
-    lotes_txt = st.text_input("Lotes (ej: 211-212-213)","211-212-213")
+    lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
     lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
     st.subheader("🧬 Configuración por lote")
     config_lotes = {}
     cols = st.columns(len(lotes))
+
     for i,lote in enumerate(lotes):
         with cols[i]:
             genetica = st.text_input(f"Genética {lote}", "ROSS")
@@ -157,26 +145,38 @@ if archivo_dni and archivo_base:
                     st.session_state.tabla.drop(columns=[col], inplace=True)
 
     # =========================
-    # SINCRONIZAR df_edit
+    # ORDENAR COLUMNAS
+    # =========================
+    base_cols = ["DNI","NOMBRE COMPLETO","CARGO"]
+    pct_cols = [f"P_{l}" for l in lotes]
+    faltas_cols = [f"F_{l}" for l in lotes]
+    st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols]
+
+    # =========================
+    # SINCRONIZAR df_edit (FIX KEYERROR)
     # =========================
     if "df_edit" not in st.session_state:
         st.session_state.df_edit = st.session_state.tabla.copy()
     else:
+        for col in st.session_state.tabla.columns:
+            if col not in st.session_state.df_edit.columns:
+                st.session_state.df_edit[col] = st.session_state.tabla[col]
+        for col in list(st.session_state.df_edit.columns):
+            if col not in st.session_state.tabla.columns:
+                st.session_state.df_edit.drop(columns=[col], inplace=True)
         st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
 
     # =========================
     # REGISTRO
     # =========================
     st.subheader("✍️ Registro por trabajador y lote")
-
-    with st.form("form_edicion_tabla"):
+    with st.form("form_edicion"):
         df_edit = st.data_editor(
             st.session_state.df_edit,
             use_container_width=True,
             num_rows="fixed"
         )
-
-        guardar = st.form_submit_button("💾 Actualizar tabla 💰 Resultado final")
+        guardar = st.form_submit_button("💾 Actualizar tabla")
 
         if guardar:
             st.session_state.df_edit = df_edit.copy()
@@ -184,27 +184,26 @@ if archivo_dni and archivo_base:
             st.success("✅ Tabla actualizada")
 
     # =========================
-    # CÁLCULO FINAL
+    # CÁLCULO
     # =========================
     df_final = st.session_state.tabla.copy()
-    columnas_pago = []
+    pagos = []
 
     for lote in lotes:
-        def pago_lote(row):
+        def pago(row):
             cargo = str(row["CARGO"]).upper()
             pct = reglas.get(cargo,0)
-            monto = config_lotes[lote]["MONTO"]
-            part = float(row[f"P_{lote}"]) / 100
+            part = float(row[f"P_{lote}"])/100
             faltas = row[f"F_{lote}"]
-            if part <= 0:
+            if part<=0:
                 return 0.0
-            return round(pct * monto * part * factor_faltas(faltas), 2)
+            return round(pct * config_lotes[lote]["MONTO"] * part * factor_faltas(faltas),2)
 
         col = f"PAGO_{lote}"
-        df_final[col] = df_final.apply(pago_lote, axis=1)
-        columnas_pago.append(col)
+        df_final[col] = df_final.apply(pago, axis=1)
+        pagos.append(col)
 
-    df_final["TOTAL S/"] = df_final[columnas_pago].sum(axis=1)
+    df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
 
     # =========================
     # RESULTADO FINAL
@@ -213,10 +212,8 @@ if archivo_dni and archivo_base:
     st.dataframe(df_final, use_container_width=True)
 
     # =========================
-    # GRÁFICO BONOS (FIX)
+    # GRÁFICO BONOS
     # =========================
-    st.subheader("📊 Distribución de bonos por trabajador")
-
     fig = px.bar(
         df_final,
         x="NOMBRE COMPLETO",
@@ -226,12 +223,10 @@ if archivo_dni and archivo_base:
     )
 
     fig.update_traces(textposition="outside", cliponaxis=False)
-
     fig.update_layout(
-        xaxis_tickangle=-45,
         height=550,
-        margin=dict(t=80, b=120),
-        yaxis=dict(rangemode="tozero")
+        xaxis_tickangle=-45,
+        margin=dict(t=80,b=140)
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -239,30 +234,26 @@ if archivo_dni and archivo_base:
     # =========================
     # GRÁFICO FALTAS
     # =========================
-    st.subheader("📉 Faltas por trabajador")
-
     faltas_cols = [c for c in df_final.columns if c.startswith("F_")]
-    df_faltas = df_final.copy()
-    df_faltas["TOTAL_FALTAS"] = df_faltas[faltas_cols].sum(axis=1)
+    df_final["TOTAL_FALTAS"] = df_final[faltas_cols].sum(axis=1)
 
-    fig_faltas = px.bar(
-        df_faltas,
+    fig2 = px.bar(
+        df_final,
         x="NOMBRE COMPLETO",
         y="TOTAL_FALTAS",
         text_auto=True,
-        title="Total de faltas acumuladas"
+        title="Total de faltas por trabajador"
     )
 
-    fig_faltas.update_traces(textposition="outside", cliponaxis=False)
-
-    fig_faltas.update_layout(
-        xaxis_tickangle=-45,
+    fig2.update_traces(textposition="outside", cliponaxis=False)
+    fig2.update_layout(
         height=450,
-        margin=dict(t=80, b=120),
-        yaxis=dict(dtick=1, rangemode="tozero")
+        xaxis_tickangle=-45,
+        margin=dict(t=80,b=140),
+        yaxis=dict(dtick=1)
     )
 
-    st.plotly_chart(fig_faltas, use_container_width=True)
+    st.plotly_chart(fig2, use_container_width=True)
 
     # =========================
     # EXPORTAR
