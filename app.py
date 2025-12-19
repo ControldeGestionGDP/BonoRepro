@@ -180,6 +180,35 @@ if archivo_dni and archivo_base:
     )
 
     # =========================
+    # ELIMINAR TRABAJADOR
+    # =========================
+    st.subheader("✂️ Eliminar trabajador (opcional)")
+    dni_eliminar = st.text_input("Ingrese DNI a eliminar", key="eliminar")
+    if st.button("Eliminar trabajador"):
+        if dni_eliminar.strip():
+            dni_eliminar = dni_eliminar.zfill(8)
+            if dni_eliminar in df_edit["DNI"].values:
+                df_edit = df_edit[df_edit["DNI"] != dni_eliminar]
+                st.success(f"✅ Trabajador con DNI {dni_eliminar} eliminado")
+            else:
+                st.warning("⚠️ DNI no encontrado en la tabla")
+        st.experimental_rerun()
+
+    # =========================
+    # BUSCAR TRABAJADOR
+    # =========================
+    st.subheader("🔍 Buscar trabajador por DNI")
+    dni_buscar = st.text_input("Ingrese DNI para buscar", key="buscar")
+    if st.button("Buscar trabajador"):
+        if dni_buscar.strip():
+            dni_buscar = dni_buscar.zfill(8)
+            encontrado = df_base[df_base["DNI"] == dni_buscar]
+            if not encontrado.empty:
+                st.dataframe(encontrado, use_container_width=True)
+            else:
+                st.warning("⚠️ DNI no encontrado en la base de trabajadores")
+
+    # =========================
     # CÁLCULO DE PAGOS (MISMA LÓGICA DE EXCEL)
     # =========================
     df_final = df_edit.copy()
@@ -234,4 +263,3 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
