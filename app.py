@@ -188,7 +188,6 @@ if archivo_dni and archivo_base:
         dni_new = st.text_input("DNI")
         if dni_new.strip().zfill(8) in df_base["DNI"].values:
             fila = df_base[df_base["DNI"]==dni_new.strip().zfill(8)].iloc[0]
-            # Solo info azulito
             st.info(f"Nombre: {fila['NOMBRE COMPLETO']} | Cargo: {fila['CARGO']}")
         submitted = st.form_submit_button("Agregar trabajador")
         if submitted:
@@ -209,6 +208,7 @@ if archivo_dni and archivo_base:
                 )
                 st.session_state.df_edit = st.session_state.tabla.copy()
                 st.success("✅ Trabajador agregado")
+                st.rerun()  # fuerza refresco inmediato
 
     eliminar_dni = st.text_input("DNI a eliminar")
     if st.button("Eliminar trabajador"):
@@ -217,6 +217,7 @@ if archivo_dni and archivo_base:
             st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"]!=eliminar_dni]
             st.session_state.df_edit = st.session_state.tabla.copy()
             st.success("✅ Trabajador eliminado")
+            st.rerun()  # fuerza refresco inmediato
 
     # =========================
     # EDITAR PARTICIPACIÓN Y FALTAS
@@ -236,6 +237,7 @@ if archivo_dni and archivo_base:
     # =========================
     # CÁLCULO DE PAGOS
     # =========================
+    st.session_state.tabla = st.session_state.df_edit.copy()
     df_final = st.session_state.tabla.copy()
     columnas_pago = []
 
@@ -246,7 +248,8 @@ if archivo_dni and archivo_base:
             monto = config_lotes[lote]["MONTO"]
             participacion = float(row[f"P_{lote}"])/100
             faltas = row[f"F_{lote}"]
-            if participacion<=0: return 0.0
+            if participacion<=0: 
+                return 0.0
             return round(pct_cargo*monto*participacion*factor_faltas(faltas),2)
         col_pago = f"PAGO_{lote}"
         df_final[col_pago] = df_final.apply(pago_lote,axis=1)
