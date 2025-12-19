@@ -201,7 +201,7 @@ if archivo_dni and archivo_base:
                 st.warning("⚠️ DNI no encontrado en la tabla")
 
     # =========================
-    # BUSCAR TRABAJADOR
+    # BUSCAR TRABAJADOR Y GUARDAR
     # =========================
     st.subheader("🔍 Buscar trabajador por DNI")
     dni_buscar = st.text_input("Ingrese DNI para buscar", key="buscar")
@@ -211,6 +211,19 @@ if archivo_dni and archivo_base:
             encontrado = df_base[df_base["DNI"] == dni_buscar]
             if not encontrado.empty:
                 st.dataframe(encontrado, use_container_width=True)
+                
+                # BOTÓN PARA GUARDAR EN LA TABLA
+                if st.button(f"➕ Guardar trabajador {dni_buscar}"):
+                    if dni_buscar not in st.session_state.tabla["DNI"].values:
+                        # Agregar trabajador con columnas de participación y faltas en 0
+                        nuevo = encontrado.copy()
+                        for lote in lotes:
+                            nuevo[f"%_{lote}"] = 0.0
+                            nuevo[f"F_{lote}"] = 0
+                        st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
+                        st.success(f"✅ Trabajador {dni_buscar} agregado a la tabla")
+                    else:
+                        st.warning("⚠️ Trabajador ya existe en la tabla")
             else:
                 st.warning("⚠️ DNI no encontrado en la base de trabajadores")
 
