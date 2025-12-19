@@ -1,15 +1,3 @@
-import streamlit as st
-import pandas as pd
-from io import BytesIO
-
-# =========================
-# CONFIGURACIÓN GLOBAL
-# =========================
-st.set_page_config(
-    page_title="Bono Reproductoras GDP",
-    layout="wide"
-)
-
 # =========================
 # PORTADA
 # =========================
@@ -18,19 +6,29 @@ if "ingresar" not in st.session_state:
 
 if not st.session_state.ingresar:
 
-    st.markdown(
-        """
-        <div style='text-align:center; padding-top:100px'>
-            <h1>🐔 BONO REPRODUCTORAS GDP</h1>
-            <h3>Sistema de cálculo y distribución de bonos</h3>
-            <p style="color:gray;">Uso interno corporativo</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
     col1, col2, col3 = st.columns([1, 2, 1])
+
     with col2:
+        st.image(
+            "logo_empresa.png",  # ← nombre del archivo
+            use_container_width=True
+        )
+
+        st.markdown(
+            """
+            <div style='text-align:center; margin-top:30px'>
+                <h1>🐔 BONO REPRODUCTORAS GDP</h1>
+                <h3>Sistema de cálculo y distribución de bonos</h3>
+                <br>
+                <p style="color:gray; font-size:14px;">
+                    Desarrollado por<br>
+                    <strong>Gerencia de Control de Gestión</strong>
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
         if st.button("🚀 Ingresar al sistema", use_container_width=True):
             st.session_state.ingresar = True
             st.rerun()
@@ -234,3 +232,4 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
