@@ -168,21 +168,57 @@ if archivo_dni and archivo_base:
     # =========================
     for lote in lotes:
         df[f"%_{lote}"] = 0.0
-    for lote in lotes:
         df[f"F_{lote}"] = 0
 
-    st.subheader("✍️ Registro por trabajador y lote")
+    # =========================
+    # INICIALIZAR SESSION_STATE PARA TABLA EDITABLE
+    # =========================
+    if "tabla" not in st.session_state:
+        st.session_state.tabla = df.copy()
 
+    st.subheader("✍️ Registro por trabajador y lote")
     df_edit = st.data_editor(
-        df,
+        st.session_state.tabla,
         use_container_width=True,
         num_rows="fixed"
     )
+    st.session_state.tabla = df_edit.copy()  # guardar cambios
 
     # =========================
-    # CÁLCULO DE PAGOS (MISMA LÓGICA DE EXCEL)
+    # BUSCAR Y AGREGAR TRABAJADOR
     # =========================
-    df_final = df_edit.copy()
+    st.subheader("🔍 Buscar y agregar trabajador por DNI")
+    dni_buscar = st.text_input("Ingrese DNI para buscar", key="buscar_trabajador")
+
+    if st.button("Buscar trabajador"):
+        dni_buscar = dni_buscar.strip().zfill(8)
+        encontrado = df_base[df_base["DNI"] == dni_buscar]
+        if not encontrado.empty:
+            st.session_state.trabajador_encontrado = encontrado.copy()
+        else:
+            st.warning("⚠️ DNI no encontrado en la base de trabajadores")
+            if "trabajador_encontrado" in st.session_state:
+                del st.session_state.trabajador_encontrado
+
+    # Mostrar encontrado y agregar
+    if "trabajador_encontrado" in st.session_state:
+        st.dataframe(st.session_state.trabajador_encontrado, use_container_width=True)
+        if st.button(f"💾 Agregar trabajador {dni_buscar}"):
+            if dni_buscar not in st.session_state.tabla["DNI"].values:
+                nuevo = st.session_state.trabajador_encontrado.copy()
+                for lote in lotes:
+                    nuevo[f"%_{lote}"] = 0.0
+                    nuevo[f"F_{lote}"] = 0
+                st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
+                st.success(f"✅ Trabajador {dni_buscar} agregado al registro")
+                del st.session_state.trabajador_encontrado
+            else:
+                st.warning("⚠️ Este trabajador ya está en el registro")
+
+    # =========================
+    # CÁLCULO DE PAGOS
+    # =========================
+    df_final = st.session_state.tabla.copy()
     columnas_pago = []
 
     for lote in lotes:
@@ -190,7 +226,6 @@ if archivo_dni and archivo_base:
         def pago_lote(row):
             cargo = str(row["CARGO"]).upper()
             pct_cargo = reglas.get(cargo, 0)
-
             monto = config_lotes[lote]["MONTO"]
             participacion = float(row[f"%_{lote}"]) / 100
             faltas = row[f"F_{lote}"]
@@ -198,13 +233,7 @@ if archivo_dni and archivo_base:
             if participacion <= 0:
                 return 0.0
 
-            pago = (
-                pct_cargo *
-                monto *
-                participacion *
-                factor_faltas(faltas)
-            )
-
+            pago = pct_cargo * monto * participacion * factor_faltas(faltas)
             return round(pago, 2)
 
         col_pago = f"PAGO_{lote}"
@@ -225,7 +254,6 @@ if archivo_dni and archivo_base:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df_final.to_excel(writer, index=False)
-
     output.seek(0)
 
     st.download_button(
