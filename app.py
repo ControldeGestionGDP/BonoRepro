@@ -1,3 +1,15 @@
+import streamlit as st
+import pandas as pd
+from io import BytesIO
+
+# =========================
+# CONFIGURACIÓN GLOBAL
+# =========================
+st.set_page_config(
+    page_title="Bono Reproductoras GDP",
+    layout="wide"
+)
+
 # =========================
 # PORTADA
 # =========================
@@ -6,43 +18,38 @@ if "ingresar" not in st.session_state:
 
 if not st.session_state.ingresar:
 
-    st.set_page_config(
-        page_title="Bono Reproductoras GDP",
-        layout="wide"
-    )
-
     st.markdown(
         """
-        <div style='text-align:center; padding-top:80px'>
+        <div style='text-align:center; padding-top:100px'>
             <h1>🐔 BONO REPRODUCTORAS GDP</h1>
             <h3>Sistema de cálculo y distribución de bonos</h3>
-            <br><br>
+            <p style="color:gray;">Uso interno corporativo</p>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    st.markdown(
-        "<div style='text-align:center'>",
-        unsafe_allow_html=True
-    )
-
-    if st.button("🚀 Ingresar al sistema"):
-        st.session_state.ingresar = True
-        st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🚀 Ingresar al sistema", use_container_width=True):
+            st.session_state.ingresar = True
+            st.rerun()
 
     st.stop()
-import streamlit as st
-import pandas as pd
-from io import BytesIO
 
 # =========================
-# CONFIG
+# APP PRINCIPAL
 # =========================
-st.set_page_config(page_title="Bono Reproductoras GDP", layout="wide")
 st.title("🐔 BONO REPRODUCTORAS GDP")
+
+st.markdown("""
+**Flujo**
+1. Subir DNIs  
+2. Subir base de trabajadores  
+3. Definir lotes y montos  
+4. Registrar participación y faltas  
+5. Obtener cálculo final del bono  
+""")
 
 # =========================
 # TABLAS DE % POR CARGO
@@ -64,7 +71,7 @@ REGLAS_PRODUCCION = {
 REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 
 # =========================
-# DESCUENTO POR FALTAS (TIPO EXCEL)
+# DESCUENTO POR FALTAS (EXACTO A EXCEL)
 # =========================
 DESCUENTO_FALTAS = {
     0: 1.00,
@@ -75,11 +82,14 @@ DESCUENTO_FALTAS = {
 }
 
 def factor_faltas(f):
-    f = int(f)
+    try:
+        f = int(f)
+    except:
+        return 0.50
     return DESCUENTO_FALTAS.get(f, 0.50)  # 5 o más
 
 # =========================
-# CARGA ARCHIVOS
+# CARGA DE ARCHIVOS
 # =========================
 archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
 archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
@@ -111,28 +121,43 @@ if archivo_dni and archivo_base:
         how="left"
     )
 
-    st.success("✅ Cruce realizado")
+    st.success("✅ Cruce de trabajadores realizado")
 
     # =========================
-    # TIPO
+    # TIPO DE PROCESO
     # =========================
-    tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN", "LEVANTE"], horizontal=True)
+    tipo = st.radio(
+        "Tipo de proceso",
+        ["PRODUCCIÓN", "LEVANTE"],
+        horizontal=True
+    )
+
     reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
 
     # =========================
     # LOTES
     # =========================
-    lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
+    lotes_txt = st.text_input(
+        "Lotes (ejemplo: 211-212-213)",
+        "211-212-213"
+    )
+
     lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
     st.subheader("🧬 Configuración por lote")
+
     config_lotes = {}
     cols = st.columns(len(lotes))
 
     for i, lote in enumerate(lotes):
         with cols[i]:
             genetica = st.text_input(f"Genética {lote}", "ROSS")
-            monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0)
+            monto = st.number_input(
+                f"Monto S/ {lote}",
+                min_value=0.0,
+                value=1000.0,
+                step=50.0
+            )
             config_lotes[lote] = {
                 "GENETICA": genetica.upper(),
                 "MONTO": monto
@@ -147,6 +172,7 @@ if archivo_dni and archivo_base:
         df[f"F_{lote}"] = 0
 
     st.subheader("✍️ Registro por trabajador y lote")
+
     df_edit = st.data_editor(
         df,
         use_container_width=True,
@@ -154,10 +180,10 @@ if archivo_dni and archivo_base:
     )
 
     # =========================
-    # CÁLCULO DE PAGOS (EXCEL PURO)
+    # CÁLCULO DE PAGOS (MISMA LÓGICA DE EXCEL)
     # =========================
     df_final = df_edit.copy()
-    pagos = []
+    columnas_pago = []
 
     for lote in lotes:
 
@@ -166,7 +192,7 @@ if archivo_dni and archivo_base:
             pct_cargo = reglas.get(cargo, 0)
 
             monto = config_lotes[lote]["MONTO"]
-            participacion = row[f"%_{lote}"] / 100
+            participacion = float(row[f"%_{lote}"]) / 100
             faltas = row[f"F_{lote}"]
 
             if participacion <= 0:
@@ -183,18 +209,18 @@ if archivo_dni and archivo_base:
 
         col_pago = f"PAGO_{lote}"
         df_final[col_pago] = df_final.apply(pago_lote, axis=1)
-        pagos.append(col_pago)
+        columnas_pago.append(col_pago)
 
-    df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
+    df_final["TOTAL S/"] = df_final[columnas_pago].sum(axis=1)
 
     # =========================
-    # RESULTADO
+    # RESULTADO FINAL
     # =========================
     st.subheader("💰 Resultado final")
     st.dataframe(df_final, use_container_width=True)
 
     # =========================
-    # EXPORT
+    # EXPORTACIÓN
     # =========================
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -208,4 +234,3 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
