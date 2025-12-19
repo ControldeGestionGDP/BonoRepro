@@ -3,7 +3,7 @@ import pandas as pd
 from io import BytesIO
 
 # =========================
-# CONFIGURACIÓN
+# CONFIG
 # =========================
 st.set_page_config(
     page_title="Bono Reproductoras GDP",
@@ -16,34 +16,43 @@ st.markdown("""
 **Flujo**
 1. Subir DNIs  
 2. Subir base de trabajadores  
-3. Definir lotes  
-4. Configurar genética y monto  
+3. Definir tipo (Producción / Levante)  
+4. Definir lotes y montos  
 5. Ingresar participación y faltas  
 6. Descargar archivo final  
 """)
 
-DESCUENTO_FALTA = 50  # S/ por falta (editable)
+# =========================
+# REGLAS POR CARGO
+# =========================
+REGLAS_CARGO = {
+    "GALPONERO": 1.00,
+    "AYUDANTE GALPONERO": 0.125,
+    "VOLANTE DESCANSERO": 0.125,
+    "VOLANTE ALIMENTO": 0.125,
+    "BIOSEGURIDAD": 0.0625,
+    "GUARDIANES": 0.0625,
+    "CAPORAL": 0.125,
+    "SUPERVISOR": 1.00,
+    "MANTENIMIENTO": 0.0,
+    "GRADING": 0.08,
+    "VACUNADORES": 0.07
+}
 
 # =========================
-# CARGA DE ARCHIVOS
+# CARGA ARCHIVOS
 # =========================
 archivo_dni = st.file_uploader("📄 Excel con lista de DNI", type=["xlsx"])
 archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
 
 if archivo_dni and archivo_base:
 
-    # =========================
-    # LECTURA
-    # =========================
     df_dni = pd.read_excel(archivo_dni, dtype=str)
     df_base = pd.read_excel(archivo_base, dtype=str)
 
     df_dni.columns = df_dni.columns.str.strip().str.upper()
     df_base.columns = df_base.columns.str.strip().str.upper()
 
-    # =========================
-    # VALIDACIONES
-    # =========================
     if "DNI" not in df_dni.columns:
         st.error("❌ El archivo de DNIs debe tener columna DNI")
         st.stop()
@@ -52,12 +61,9 @@ if archivo_dni and archivo_base:
         st.error("❌ La base debe tener: DNI, NOMBRE COMPLETO y CARGO")
         st.stop()
 
-    # =========================
-    # LIMPIEZA DNI
-    # =========================
-    def limpiar_dni(serie):
+    def limpiar_dni(s):
         return (
-            serie.astype(str)
+            s.astype(str)
             .str.replace("'", "", regex=False)
             .str.replace(".0", "", regex=False)
             .str.strip()
@@ -81,23 +87,23 @@ if archivo_dni and archivo_base:
     st.success("✅ Cruce realizado")
 
     # =========================
-    # DEFINICIÓN DE LOTES
+    # TIPO DE PROCESO
+    # =========================
+    st.subheader("🏷️ Tipo de proceso")
+    tipo = st.radio("Seleccione uno", ["PRODUCCIÓN", "LEVANTE"], horizontal=True)
+
+    # =========================
+    # LOTES
     # =========================
     st.subheader("🔢 Definir lotes")
-
-    lotes_txt = st.text_input(
-        "Ingrese los lotes separados por guion (ej: 211-212-213)",
-        value="211-212-213"
-    )
-
+    lotes_txt = st.text_input("Ejemplo: 211-212-213", value="211-212-213")
     lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
-    if len(lotes) == 0:
-        st.warning("Ingrese al menos un lote")
+    if not lotes:
         st.stop()
 
     # =========================
-    # PANEL GENÉTICA Y MONTO
+    # CONFIG POR LOTE
     # =========================
     st.subheader("🧬 Configuración por lote")
 
@@ -106,60 +112,59 @@ if archivo_dni and archivo_base:
 
     for i, lote in enumerate(lotes):
         with cols[i]:
-            genetica = st.text_input(f"Genética {lote}", "ROSS")
+            genetica = st.text_input(f"Genética {lote}", value="ROSS")
             monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0)
-            config_lotes[lote] = {
-                "GENETICA": genetica,
-                "MONTO": monto
-            }
+            config_lotes[lote] = {"genetica": genetica, "monto": monto}
 
     # =========================
-    # CREAR COLUMNAS DINÁMICAS
+    # COLUMNAS PARTICIPACIÓN
     # =========================
     for lote in lotes:
         df[f"%_{lote}"] = 0.0
+
+    for lote in lotes:
         df[f"F_{lote}"] = 0
-        df[f"PAGO_{lote}"] = 0.0
 
     st.subheader("✍️ Registro por trabajador y lote")
-
-    df_editado = st.data_editor(
-        df,
-        use_container_width=True,
-        num_rows="fixed"
-    )
+    df_edit = st.data_editor(df, use_container_width=True, num_rows="fixed")
 
     # =========================
-    # CÁLCULO DE PAGOS
+    # CÁLCULO FINAL
     # =========================
+    df_final = df_edit.copy()
+    total_cols = []
+
     for lote in lotes:
-        monto = config_lotes[lote]["MONTO"]
+        def calcular_pago(row):
+            cargo = str(row["CARGO"]).upper()
+            base_pct = REGLAS_CARGO.get(cargo, 0)
+            monto = config_lotes[lote]["monto"]
+            participacion = row[f"%_{lote}"] / 100
+            faltas = row[f"F_{lote}"]
 
-        df_editado[f"PAGO_{lote}"] = (
-            df_editado[f"%_{lote}"].astype(float) / 100 * monto
-            - df_editado[f"F_{lote}"].astype(float) * DESCUENTO_FALTA
-        )
+            pago = monto * participacion * base_pct
+            pago = max(pago - (faltas * 5), 0)  # regla simple de descuento
+            return round(pago, 2)
 
-        df_editado[f"PAGO_{lote}"] = df_editado[f"PAGO_{lote}"].clip(lower=0)
+        df_final[f"PAGO_{lote}"] = df_final.apply(calcular_pago, axis=1)
+        total_cols.append(f"PAGO_{lote}")
 
-    pago_cols = [f"PAGO_{lote}" for lote in lotes]
-    df_editado["TOTAL S/"] = df_editado[pago_cols].sum(axis=1)
+    df_final["TOTAL S/"] = df_final[total_cols].sum(axis=1)
 
     st.subheader("💰 Resultado final")
-    st.dataframe(df_editado, use_container_width=True)
+    st.dataframe(df_final, use_container_width=True)
 
     # =========================
-    # EXPORTACIÓN
+    # EXPORT
     # =========================
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_editado.to_excel(writer, index=False, sheet_name="Detalle")
-        pd.DataFrame(config_lotes).T.to_excel(writer, sheet_name="Configuracion_Lotes")
+        df_final.to_excel(writer, index=False)
 
     output.seek(0)
 
     st.download_button(
-        "📤 Descargar archivo final",
+        "📥 Descargar archivo final",
         data=output,
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
