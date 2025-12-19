@@ -17,7 +17,6 @@ if "ingresar" not in st.session_state:
     st.session_state.ingresar = False
 
 if not st.session_state.ingresar:
-
     st.markdown(
         """
         <div style='text-align:center; padding-top:100px'>
@@ -41,7 +40,6 @@ if not st.session_state.ingresar:
 # APP PRINCIPAL
 # =========================
 st.title("🐔 BONO REPRODUCTORAS GDP")
-
 st.markdown("""
 **Flujo**
 1. Subir DNIs  
@@ -73,13 +71,7 @@ REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 # =========================
 # DESCUENTO POR FALTAS
 # =========================
-DESCUENTO_FALTAS = {
-    0: 1.00,
-    1: 0.90,
-    2: 0.80,
-    3: 0.70,
-    4: 0.60
-}
+DESCUENTO_FALTAS = {0:1.0, 1:0.9, 2:0.8, 3:0.7, 4:0.6}
 
 def factor_faltas(f):
     try:
@@ -95,7 +87,6 @@ archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
 archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
 
 if archivo_dni and archivo_base:
-
     df_dni = pd.read_excel(archivo_dni, dtype=str)
     df_base = pd.read_excel(archivo_base, dtype=str)
 
@@ -103,59 +94,35 @@ if archivo_dni and archivo_base:
     df_base.columns = df_base.columns.str.strip().str.upper()
 
     def limpiar_dni(s):
-        return (
-            s.astype(str)
-            .str.replace("'", "", regex=False)
-            .str.replace(".0", "", regex=False)
-            .str.strip()
-            .str.zfill(8)
-        )
+        return s.astype(str).str.replace("'", "", regex=False).str.replace(".0", "", regex=False).str.strip().str.zfill(8)
 
     df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
     df_base["DNI"] = limpiar_dni(df_base["DNI"])
     df_base = df_base.drop_duplicates("DNI")
 
-    df = df_dni.merge(
-        df_base[["DNI", "NOMBRE COMPLETO", "CARGO"]],
-        on="DNI",
-        how="left"
-    )
-
+    df = df_dni.merge(df_base[["DNI","NOMBRE COMPLETO","CARGO"]], on="DNI", how="left")
     st.success("✅ Cruce de trabajadores realizado")
 
     # =========================
     # TIPO DE PROCESO
     # =========================
-    tipo = st.radio(
-        "Tipo de proceso",
-        ["PRODUCCIÓN", "LEVANTE"],
-        horizontal=True
-    )
-
-    reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
+    tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
+    reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
 
     # =========================
     # LOTES
     # =========================
-    lotes_txt = st.text_input(
-        "Lotes (ejemplo: 211-212-213)",
-        "211-212-213"
-    )
+    lotes_txt = st.text_input("Lotes (ejemplo: 211-212-213)","211-212-213")
     lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
     st.subheader("🧬 Configuración por lote")
     config_lotes = {}
     cols = st.columns(len(lotes))
-    for i, lote in enumerate(lotes):
+    for i,lote in enumerate(lotes):
         with cols[i]:
             genetica = st.text_input(f"Genética {lote}", "ROSS")
-            monto = st.number_input(
-                f"Monto S/ {lote}",
-                min_value=0.0,
-                value=1000.0,
-                step=50.0
-            )
-            config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
+            monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0, step=50.0)
+            config_lotes[lote] = {"GENETICA":genetica.upper(),"MONTO":monto}
 
     # =========================
     # SESSION STATE DE LA TABLA
@@ -163,25 +130,30 @@ if archivo_dni and archivo_base:
     if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
     else:
-        # Ajustar columnas dinámicas según lotes
+        # Añadir columnas de lotes nuevas
         for lote in lotes:
             if f"%_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"%_{lote}"] = 0.0
             if f"F_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"F_{lote}"] = 0
-        # Eliminar columnas de lotes que ya no existan
+        # Eliminar columnas de lotes que no existan
         for col in list(st.session_state.tabla.columns):
             if col.startswith("%_") or col.startswith("F_"):
                 lote_col = col.split("_")[1]
                 if lote_col not in lotes:
                     st.session_state.tabla.drop(columns=[col], inplace=True)
 
+    # =========================
+    # ORDENAR COLUMNAS: DNI, NOMBRE, CARGO, %LOTE..., F_LOTE...
+    # =========================
+    base_cols = ["DNI","NOMBRE COMPLETO","CARGO"]
+    pct_cols = [f"%_{l}" for l in lotes]
+    faltas_cols = [f"F_{l}" for l in lotes]
+    otras_cols = [c for c in st.session_state.tabla.columns if c not in base_cols + pct_cols + faltas_cols]
+    st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols + otras_cols]
+
     st.subheader("✍️ Registro por trabajador y lote")
-    df_edit = st.data_editor(
-        st.session_state.tabla,
-        use_container_width=True,
-        num_rows="fixed"
-    )
+    df_edit = st.data_editor(st.session_state.tabla, use_container_width=True, num_rows="fixed")
     st.session_state.tabla = df_edit.copy()
 
     # =========================
@@ -206,16 +178,18 @@ if archivo_dni and archivo_base:
     if st.button("Buscar trabajador"):
         if dni_buscar.strip():
             dni_buscar = dni_buscar.zfill(8)
-            encontrado = df_base[df_base["DNI"] == dni_buscar]
+            encontrado = df_base[df_base["DNI"]==dni_buscar]
             if not encontrado.empty:
-                st.dataframe(encontrado, use_container_width=True)
+                st.dataframe(encontrado,use_container_width=True)
                 if st.button("➕ Agregar trabajador a la tabla"):
                     if dni_buscar not in st.session_state.tabla["DNI"].values:
                         nuevo = encontrado.copy()
                         for lote in lotes:
-                            nuevo[f"%_{lote}"] = 0.0
-                            nuevo[f"F_{lote}"] = 0
-                        st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
+                            nuevo[f"%_{lote}"]=0.0
+                            nuevo[f"F_{lote}"]=0
+                        st.session_state.tabla = pd.concat([st.session_state.tabla,nuevo],ignore_index=True)
+                        # Reordenar columnas nuevamente
+                        st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols + otras_cols]
                         st.success(f"✅ Trabajador {dni_buscar} agregado a la tabla")
                     else:
                         st.warning("⚠️ El trabajador ya está en la tabla")
@@ -227,21 +201,19 @@ if archivo_dni and archivo_base:
     # =========================
     df_final = st.session_state.tabla.copy()
     columnas_pago = []
-
     for lote in lotes:
         def pago_lote(row):
             cargo = str(row["CARGO"]).upper()
-            pct_cargo = reglas.get(cargo, 0)
+            pct_cargo = reglas.get(cargo,0)
             monto = config_lotes[lote]["MONTO"]
-            participacion = float(row.get(f"%_{lote}", 0)) / 100
-            faltas = row.get(f"F_{lote}", 0)
-            if participacion <= 0:
+            participacion = float(row.get(f"%_{lote}",0))/100
+            faltas = row.get(f"F_{lote}",0)
+            if participacion<=0:
                 return 0.0
-            pago = pct_cargo * monto * participacion * factor_faltas(faltas)
-            return round(pago, 2)
-
+            pago = pct_cargo*monto*participacion*factor_faltas(faltas)
+            return round(pago,2)
         col_pago = f"PAGO_{lote}"
-        df_final[col_pago] = df_final.apply(pago_lote, axis=1)
+        df_final[col_pago] = df_final.apply(pago_lote,axis=1)
         columnas_pago.append(col_pago)
 
     df_final["TOTAL S/"] = df_final[columnas_pago].sum(axis=1)
@@ -250,16 +222,15 @@ if archivo_dni and archivo_base:
     # RESULTADO FINAL
     # =========================
     st.subheader("💰 Resultado final")
-    st.dataframe(df_final, use_container_width=True)
+    st.dataframe(df_final,use_container_width=True)
 
     # =========================
     # EXPORTACIÓN
     # =========================
     output = BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_final.to_excel(writer, index=False)
+    with pd.ExcelWriter(output,engine="openpyxl") as writer:
+        df_final.to_excel(writer,index=False)
     output.seek(0)
-
     st.download_button(
         "📥 Descargar archivo final",
         data=output,
