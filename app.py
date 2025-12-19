@@ -177,9 +177,9 @@ if archivo_dni and archivo_base:
         st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
 
     # =========================
-    # AGREGAR / ELIMINAR TRABAJADOR
+    # AGREGAR TRABAJADOR
     # =========================
-    st.subheader("➕ Agregar / ➖ Eliminar trabajador")
+    st.subheader("➕ Agregar trabajador")
     with st.form("agregar_trabajador", clear_on_submit=True):
         dni_new = st.text_input("DNI")
         if dni_new.strip().zfill(8) in df_base["DNI"].values:
@@ -207,18 +207,17 @@ if archivo_dni and archivo_base:
                 st.rerun()
 
     # =========================
-    # ELIMINAR TRABAJADOR CON MENSAJES
+    # ELIMINAR TRABAJADOR CON MENSAJE VERDE
     # =========================
-    eliminar_dni = st.text_input("DNI a eliminar")
+    st.subheader("➖ Eliminar trabajador")
+    eliminar_dni = st.text_input("DNI a eliminar").strip().zfill(8)
     if st.button("Eliminar trabajador"):
-        eliminar_dni = eliminar_dni.strip().zfill(8)
         if eliminar_dni in st.session_state.tabla["DNI"].values:
-            st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"]!=eliminar_dni]
+            st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"] != eliminar_dni]
             st.session_state.df_edit = st.session_state.tabla.copy()
-            st.success(f"✅ Trabajador con DNI {eliminar_dni} eliminado")
-            st.rerun()
+            st.success("✅ Trabajador eliminado")  # Mensaje verde
         else:
-            st.info(f"ℹ️ El trabajador con DNI {eliminar_dni} no existe o ya fue eliminado")
+            st.info("ℹ️ El trabajador no existe o ya fue eliminado")
 
     # =========================
     # EDITAR PARTICIPACIÓN Y FALTAS
