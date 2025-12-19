@@ -5,27 +5,13 @@ from io import BytesIO
 # =========================
 # CONFIG
 # =========================
-st.set_page_config(
-    page_title="Bono Reproductoras GDP",
-    layout="wide"
-)
-
+st.set_page_config(page_title="Bono Reproductoras GDP", layout="wide")
 st.title("🐔 BONO REPRODUCTORAS GDP")
 
-st.markdown("""
-**Flujo**
-1. Subir DNIs  
-2. Subir base de trabajadores  
-3. Definir tipo (Producción / Levante)  
-4. Definir lotes y montos  
-5. Ingresar participación y faltas  
-6. Descargar archivo final  
-""")
-
 # =========================
-# REGLAS POR CARGO
+# TABLAS DE % POR CARGO
 # =========================
-REGLAS_CARGO = {
+REGLAS_PRODUCCION = {
     "GALPONERO": 1.00,
     "AYUDANTE GALPONERO": 0.125,
     "VOLANTE DESCANSERO": 0.125,
@@ -39,10 +25,14 @@ REGLAS_CARGO = {
     "VACUNADORES": 0.07
 }
 
+REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()  # hoy iguales, mañana ajustables
+
+DESCUENTO_FALTA = 5  # S/ por falta
+
 # =========================
 # CARGA ARCHIVOS
 # =========================
-archivo_dni = st.file_uploader("📄 Excel con lista de DNI", type=["xlsx"])
+archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
 archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
 
 if archivo_dni and archivo_base:
@@ -52,14 +42,6 @@ if archivo_dni and archivo_base:
 
     df_dni.columns = df_dni.columns.str.strip().str.upper()
     df_base.columns = df_base.columns.str.strip().str.upper()
-
-    if "DNI" not in df_dni.columns:
-        st.error("❌ El archivo de DNIs debe tener columna DNI")
-        st.stop()
-
-    if not {"DNI", "NOMBRE COMPLETO", "CARGO"}.issubset(df_base.columns):
-        st.error("❌ La base debe tener: DNI, NOMBRE COMPLETO y CARGO")
-        st.stop()
 
     def limpiar_dni(s):
         return (
@@ -73,11 +55,8 @@ if archivo_dni and archivo_base:
     df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
     df_base["DNI"] = limpiar_dni(df_base["DNI"])
 
-    df_base = df_base.drop_duplicates(subset="DNI")
+    df_base = df_base.drop_duplicates("DNI")
 
-    # =========================
-    # CRUCE
-    # =========================
     df = df_dni.merge(
         df_base[["DNI", "NOMBRE COMPLETO", "CARGO"]],
         on="DNI",
@@ -87,41 +66,32 @@ if archivo_dni and archivo_base:
     st.success("✅ Cruce realizado")
 
     # =========================
-    # TIPO DE PROCESO
+    # TIPO
     # =========================
-    st.subheader("🏷️ Tipo de proceso")
-    tipo = st.radio("Seleccione uno", ["PRODUCCIÓN", "LEVANTE"], horizontal=True)
+    tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN", "LEVANTE"], horizontal=True)
+    reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
 
     # =========================
     # LOTES
     # =========================
-    st.subheader("🔢 Definir lotes")
-    lotes_txt = st.text_input("Ejemplo: 211-212-213", value="211-212-213")
+    lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
     lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
-    if not lotes:
-        st.stop()
-
-    # =========================
-    # CONFIG POR LOTE
-    # =========================
-    st.subheader("🧬 Configuración por lote")
-
     config_lotes = {}
+    st.subheader("🧬 Configuración por lote")
     cols = st.columns(len(lotes))
 
     for i, lote in enumerate(lotes):
         with cols[i]:
-            genetica = st.text_input(f"Genética {lote}", value="ROSS")
+            genetica = st.text_input(f"Genética {lote}", "ROSS")
             monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0)
-            config_lotes[lote] = {"genetica": genetica, "monto": monto}
+            config_lotes[lote] = monto
 
     # =========================
-    # COLUMNAS PARTICIPACIÓN
+    # COLUMNAS PARTICIPACIÓN Y FALTAS
     # =========================
     for lote in lotes:
         df[f"%_{lote}"] = 0.0
-
     for lote in lotes:
         df[f"F_{lote}"] = 0
 
@@ -129,27 +99,28 @@ if archivo_dni and archivo_base:
     df_edit = st.data_editor(df, use_container_width=True, num_rows="fixed")
 
     # =========================
-    # CÁLCULO FINAL
+    # CÁLCULO DE PAGOS
     # =========================
     df_final = df_edit.copy()
-    total_cols = []
 
+    pagos = []
     for lote in lotes:
-        def calcular_pago(row):
+
+        def pago_lote(row):
             cargo = str(row["CARGO"]).upper()
-            base_pct = REGLAS_CARGO.get(cargo, 0)
-            monto = config_lotes[lote]["monto"]
+            pct_cargo = reglas.get(cargo, 0)
+            monto = config_lotes[lote]
             participacion = row[f"%_{lote}"] / 100
             faltas = row[f"F_{lote}"]
 
-            pago = monto * participacion * base_pct
-            pago = max(pago - (faltas * 5), 0)  # regla simple de descuento
-            return round(pago, 2)
+            pago = monto * participacion * pct_cargo
+            pago -= faltas * DESCUENTO_FALTA
+            return round(max(pago, 0), 2)
 
-        df_final[f"PAGO_{lote}"] = df_final.apply(calcular_pago, axis=1)
-        total_cols.append(f"PAGO_{lote}")
+        df_final[f"PAGO_{lote}"] = df_final.apply(pago_lote, axis=1)
+        pagos.append(f"PAGO_{lote}")
 
-    df_final["TOTAL S/"] = df_final[total_cols].sum(axis=1)
+    df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
 
     st.subheader("💰 Resultado final")
     st.dataframe(df_final, use_container_width=True)
