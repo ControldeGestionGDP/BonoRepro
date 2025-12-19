@@ -25,9 +25,22 @@ REGLAS_PRODUCCION = {
     "VACUNADORES": 0.07
 }
 
-REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()  # hoy iguales, mañana ajustables
+REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 
-DESCUENTO_FALTA = 5  # S/ por falta
+# =========================
+# DESCUENTO POR FALTAS (TIPO EXCEL)
+# =========================
+DESCUENTO_FALTAS = {
+    0: 1.00,
+    1: 0.90,
+    2: 0.80,
+    3: 0.70,
+    4: 0.60
+}
+
+def factor_faltas(f):
+    f = int(f)
+    return DESCUENTO_FALTAS.get(f, 0.50)  # 5 o más
 
 # =========================
 # CARGA ARCHIVOS
@@ -54,7 +67,6 @@ if archivo_dni and archivo_base:
 
     df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
     df_base["DNI"] = limpiar_dni(df_base["DNI"])
-
     df_base = df_base.drop_duplicates("DNI")
 
     df = df_dni.merge(
@@ -77,15 +89,18 @@ if archivo_dni and archivo_base:
     lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
     lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
-    config_lotes = {}
     st.subheader("🧬 Configuración por lote")
+    config_lotes = {}
     cols = st.columns(len(lotes))
 
     for i, lote in enumerate(lotes):
         with cols[i]:
             genetica = st.text_input(f"Genética {lote}", "ROSS")
             monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0)
-            config_lotes[lote] = monto
+            config_lotes[lote] = {
+                "GENETICA": genetica.upper(),
+                "MONTO": monto
+            }
 
     # =========================
     # COLUMNAS PARTICIPACIÓN Y FALTAS
@@ -96,32 +111,49 @@ if archivo_dni and archivo_base:
         df[f"F_{lote}"] = 0
 
     st.subheader("✍️ Registro por trabajador y lote")
-    df_edit = st.data_editor(df, use_container_width=True, num_rows="fixed")
+    df_edit = st.data_editor(
+        df,
+        use_container_width=True,
+        num_rows="fixed"
+    )
 
     # =========================
-    # CÁLCULO DE PAGOS
+    # CÁLCULO DE PAGOS (EXCEL PURO)
     # =========================
     df_final = df_edit.copy()
-
     pagos = []
+
     for lote in lotes:
 
         def pago_lote(row):
             cargo = str(row["CARGO"]).upper()
             pct_cargo = reglas.get(cargo, 0)
-            monto = config_lotes[lote]
+
+            monto = config_lotes[lote]["MONTO"]
             participacion = row[f"%_{lote}"] / 100
             faltas = row[f"F_{lote}"]
 
-            pago = monto * participacion * pct_cargo
-            pago -= faltas * DESCUENTO_FALTA
-            return round(max(pago, 0), 2)
+            if participacion <= 0:
+                return 0.0
 
-        df_final[f"PAGO_{lote}"] = df_final.apply(pago_lote, axis=1)
-        pagos.append(f"PAGO_{lote}")
+            pago = (
+                pct_cargo *
+                monto *
+                participacion *
+                factor_faltas(faltas)
+            )
+
+            return round(pago, 2)
+
+        col_pago = f"PAGO_{lote}"
+        df_final[col_pago] = df_final.apply(pago_lote, axis=1)
+        pagos.append(col_pago)
 
     df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
 
+    # =========================
+    # RESULTADO
+    # =========================
     st.subheader("💰 Resultado final")
     st.dataframe(df_final, use_container_width=True)
 
