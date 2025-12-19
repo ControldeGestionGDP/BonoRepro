@@ -132,8 +132,8 @@ if archivo_dni and archivo_base:
     else:
         # Añadir columnas de lotes nuevas
         for lote in lotes:
-            if f"%_{lote}" not in st.session_state.tabla.columns:
-                st.session_state.tabla[f"%_{lote}"] = 0.0
+            if f"P_{lote}" not in st.session_state.tabla.columns:
+                st.session_state.tabla[f"P_{lote}"] = 0.0
             if f"F_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"F_{lote}"] = 0
         # Eliminar columnas de lotes que no existan
@@ -144,10 +144,10 @@ if archivo_dni and archivo_base:
                     st.session_state.tabla.drop(columns=[col], inplace=True)
 
     # =========================
-    # ORDENAR COLUMNAS: DNI, NOMBRE, CARGO, %LOTE..., F_LOTE...
+    # ORDENAR COLUMNAS: DNI, NOMBRE, CARGO, P_LOTE..., F_LOTE...
     # =========================
     base_cols = ["DNI","NOMBRE COMPLETO","CARGO"]
-    pct_cols = [f"%_{l}" for l in lotes]
+    pct_cols = [f"P_{l}" for l in lotes]
     faltas_cols = [f"F_{l}" for l in lotes]
     otras_cols = [c for c in st.session_state.tabla.columns if c not in base_cols + pct_cols + faltas_cols]
     st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols + otras_cols]
@@ -185,7 +185,7 @@ if archivo_dni and archivo_base:
                     if dni_buscar not in st.session_state.tabla["DNI"].values:
                         nuevo = encontrado.copy()
                         for lote in lotes:
-                            nuevo[f"%_{lote}"]=0.0
+                            nuevo[f"P_{lote}"]=0.0
                             nuevo[f"F_{lote}"]=0
                         st.session_state.tabla = pd.concat([st.session_state.tabla,nuevo],ignore_index=True)
                         # Reordenar columnas nuevamente
@@ -206,7 +206,7 @@ if archivo_dni and archivo_base:
             cargo = str(row["CARGO"]).upper()
             pct_cargo = reglas.get(cargo,0)
             monto = config_lotes[lote]["MONTO"]
-            participacion = float(row.get(f"%_{lote}",0))/100
+            participacion = float(row.get(f"P_{lote}",0))/100
             faltas = row.get(f"F_{lote}",0)
             if participacion<=0:
                 return 0.0
@@ -237,4 +237,3 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
