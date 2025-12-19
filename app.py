@@ -176,14 +176,6 @@ if archivo_dni and archivo_base:
     if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
 
-    st.subheader("✍️ Registro por trabajador y lote")
-    df_edit = st.data_editor(
-        st.session_state.tabla,
-        use_container_width=True,
-        num_rows="fixed"
-    )
-    st.session_state.tabla = df_edit.copy()  # guardar cambios
-
     # =========================
     # BUSCAR Y AGREGAR TRABAJADOR
     # =========================
@@ -204,16 +196,28 @@ if archivo_dni and archivo_base:
     if "trabajador_encontrado" in st.session_state:
         st.dataframe(st.session_state.trabajador_encontrado, use_container_width=True)
         if st.button(f"💾 Agregar trabajador {dni_buscar}"):
-            if dni_buscar not in st.session_state.tabla["DNI"].values:
-                nuevo = st.session_state.trabajador_encontrado.copy()
-                for lote in lotes:
+            nuevo = st.session_state.trabajador_encontrado.copy()
+            # Asegurar que todas las columnas de lotes existen
+            for lote in lotes:
+                if f"%_{lote}" not in nuevo.columns:
                     nuevo[f"%_{lote}"] = 0.0
+                if f"F_{lote}" not in nuevo.columns:
                     nuevo[f"F_{lote}"] = 0
+            # Evitar duplicados
+            if dni_buscar not in st.session_state.tabla["DNI"].values:
                 st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
                 st.success(f"✅ Trabajador {dni_buscar} agregado al registro")
                 del st.session_state.trabajador_encontrado
             else:
                 st.warning("⚠️ Este trabajador ya está en el registro")
+
+    st.subheader("✍️ Registro por trabajador y lote")
+    df_edit = st.data_editor(
+        st.session_state.tabla,
+        use_container_width=True,
+        num_rows="fixed"
+    )
+    st.session_state.tabla = df_edit.copy()  # guardar cambios
 
     # =========================
     # CÁLCULO DE PAGOS
@@ -226,13 +230,13 @@ if archivo_dni and archivo_base:
         def pago_lote(row):
             cargo = str(row["CARGO"]).upper()
             pct_cargo = reglas.get(cargo, 0)
+            # Manejar si no existen las columnas por seguridad
+            participacion = float(row.get(f"%_{lote}", 0)) / 100
+            faltas = row.get(f"F_{lote}", 0)
             monto = config_lotes[lote]["MONTO"]
-            participacion = float(row[f"%_{lote}"]) / 100
-            faltas = row[f"F_{lote}"]
 
             if participacion <= 0:
                 return 0.0
-
             pago = pct_cargo * monto * participacion * factor_faltas(faltas)
             return round(pago, 2)
 
