@@ -6,32 +6,26 @@ from io import BytesIO
 # CONFIGURACIÓN
 # =========================
 st.set_page_config(
-    page_title="Bono Reproductoras",
+    page_title="Bono Reproductoras GDP",
     layout="wide"
 )
 
 st.title("🐔 BONO REPRODUCTORAS GDP")
 
 st.markdown("""
-**Flujo:**
-1. Subir Excel con DNIs  
+**Flujo**
+1. Subir DNIs  
 2. Subir base de trabajadores  
-3. Ingresar lotes, participación y faltas  
-4. Descargar archivo final  
+3. Definir lotes  
+4. Ingresar participación y faltas  
+5. Descargar archivo final  
 """)
 
 # =========================
 # CARGA DE ARCHIVOS
 # =========================
-archivo_dni = st.file_uploader(
-    "📄 Excel con lista de DNI",
-    type=["xlsx"]
-)
-
-archivo_base = st.file_uploader(
-    "📊 Base de trabajadores",
-    type=["xlsx"]
-)
+archivo_dni = st.file_uploader("📄 Excel con lista de DNI", type=["xlsx"])
+archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
 
 if archivo_dni and archivo_base:
 
@@ -75,40 +69,41 @@ if archivo_dni and archivo_base:
     # =========================
     # CRUCE
     # =========================
-    df_base_persona = df_dni.merge(
+    df = df_dni.merge(
         df_base[["DNI", "NOMBRE COMPLETO", "CARGO"]],
         on="DNI",
         how="left"
     )
 
-    df_base_persona["ESTADO"] = df_base_persona["NOMBRE COMPLETO"].apply(
-        lambda x: "OK" if pd.notna(x) else "NO ENCONTRADO"
+    st.success("✅ Cruce realizado")
+
+    # =========================
+    # DEFINICIÓN DE LOTES
+    # =========================
+    st.subheader("🔢 Definir lotes")
+
+    lotes_txt = st.text_input(
+        "Ingrese los lotes separados por guion (ej: 211-212-213)",
+        value="211-212-213"
     )
 
+    lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
+
+    if len(lotes) == 0:
+        st.warning("Ingrese al menos un lote")
+        st.stop()
+
     # =========================
-    # EXPANDIR A 4 LOTES
+    # CREAR COLUMNAS DINÁMICAS
     # =========================
-    filas = []
-    for _, row in df_base_persona.iterrows():
-        for _ in range(4):  # 4 lotes por persona
-            filas.append({
-                "DNI": row["DNI"],
-                "NOMBRE COMPLETO": row["NOMBRE COMPLETO"],
-                "CARGO": row["CARGO"],
-                "ESTADO": row["ESTADO"],
-                "LOTE": "",
-                "PARTICIPACIÓN (%)": "",
-                "FALTAS": ""
-            })
+    for lote in lotes:
+        df[f"P.{lote}"] = ""
+        df[f"F.{lote}"] = ""
 
-    df_lotes = pd.DataFrame(filas)
-
-    st.success("✅ Cruce realizado – ingrese información por lote")
-
-    st.subheader("✍️ Registro por persona y lote")
+    st.subheader("✍️ Registro por trabajador y lote")
 
     df_editado = st.data_editor(
-        df_lotes,
+        df,
         use_container_width=True,
         num_rows="fixed"
     )
@@ -125,6 +120,6 @@ if archivo_dni and archivo_base:
     st.download_button(
         "📤 Descargar archivo final",
         data=output,
-        file_name="bono_reproductoras_por_lote.xlsx",
+        file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
