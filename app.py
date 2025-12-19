@@ -52,7 +52,7 @@ if not st.session_state["ingresar"]:
 
         # LOGO (NO FALLA SI NO EXISTE)
         try:
-            st.image("logo_empresa.png", use_container_width=True)
+            st.image("logo_empresa.png", use_container_width=220)
         except:
             st.markdown(
                 "<h2 style='text-align:center;'>🏢 TU EMPRESA</h2>",
@@ -279,3 +279,4 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
