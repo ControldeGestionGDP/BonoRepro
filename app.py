@@ -172,7 +172,7 @@ if archivo_dni and archivo_base:
         df[f"F_{lote}"] = 0
 
     # =========================
-    # INICIALIZAR SESSION_STATE PARA TABLA
+    # INICIALIZAR SESSION_STATE PARA TABLA EDITABLE
     # =========================
     if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
@@ -183,6 +183,7 @@ if archivo_dni and archivo_base:
         use_container_width=True,
         num_rows="fixed"
     )
+    # Guardar cambios del editor en session_state
     st.session_state.tabla = df_edit.copy()
 
     # =========================
@@ -204,29 +205,38 @@ if archivo_dni and archivo_base:
     # =========================
     st.subheader("🔍 Buscar trabajador por DNI")
     dni_buscar = st.text_input("Ingrese DNI para buscar", key="buscar")
+
+    # Botón de búsqueda
     if st.button("Buscar trabajador"):
         if dni_buscar.strip():
             dni_buscar = dni_buscar.zfill(8)
             encontrado = df_base[df_base["DNI"] == dni_buscar]
             if not encontrado.empty:
-                st.dataframe(encontrado, use_container_width=True)
-                if st.button(f"💾 Agregar trabajador {dni_buscar} a registro"):
-                    if dni_buscar not in st.session_state.tabla["DNI"].values:
-                        nuevo = encontrado.copy()
-                        for lote in lotes:
-                            if f"%_{lote}" not in nuevo.columns:
-                                nuevo[f"%_{lote}"] = 0.0
-                            if f"F_{lote}" not in nuevo.columns:
-                                nuevo[f"F_{lote}"] = 0
-                        st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
-                        st.success(f"✅ Trabajador {dni_buscar} agregado al registro")
-                    else:
-                        st.warning("⚠️ Este trabajador ya está en el registro")
+                st.session_state.trabajador_encontrado = encontrado.copy()
             else:
                 st.warning("⚠️ DNI no encontrado en la base de trabajadores")
+                if "trabajador_encontrado" in st.session_state:
+                    del st.session_state.trabajador_encontrado
+
+    # Mostrar resultados y botón para agregar
+    if "trabajador_encontrado" in st.session_state:
+        st.dataframe(st.session_state.trabajador_encontrado, use_container_width=True)
+        if st.button(f"💾 Agregar trabajador {dni_buscar} a registro"):
+            if dni_buscar not in st.session_state.tabla["DNI"].values:
+                nuevo = st.session_state.trabajador_encontrado.copy()
+                for lote in lotes:
+                    if f"%_{lote}" not in nuevo.columns:
+                        nuevo[f"%_{lote}"] = 0.0
+                    if f"F_{lote}" not in nuevo.columns:
+                        nuevo[f"F_{lote}"] = 0
+                st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
+                st.success(f"✅ Trabajador {dni_buscar} agregado al registro")
+                del st.session_state.trabajador_encontrado  # limpiar temporal
+            else:
+                st.warning("⚠️ Este trabajador ya está en el registro")
 
     # =========================
-    # CÁLCULO DE PAGOS
+    # CÁLCULO DE PAGOS (MISMA LÓGICA DE EXCEL)
     # =========================
     df_final = st.session_state.tabla.copy()
     columnas_pago = []
