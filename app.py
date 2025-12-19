@@ -78,34 +78,11 @@ st.markdown("""
 **Flujo**
 1. Subir DNIs  
 2. Subir base de trabajadores  
-3. Definir lotes y montos  
-4. Registrar participación y faltas  
-5. Obtener cálculo final del bono  
+3. Definir granja  
+4. Definir lotes y montos  
+5. Registrar participación y faltas  
+6. Obtener cálculo final del bono  
 """)
-
-# =========================
-# 🏡 GRANJA (NUEVO - SOLO ESTO SE AGREGA)
-# =========================
-st.subheader("🏡 Granja")
-
-if "granjas" not in st.session_state:
-    st.session_state.granjas = [
-        "Chilco I", "Chilco II", "Chilco III", "Chilco IV"
-    ]
-
-opcion_granja = st.selectbox(
-    "Seleccione la granja",
-    st.session_state.granjas + ["➕ Agregar"]
-)
-
-if opcion_granja == "➕ Agregar":
-    nueva_granja = st.text_input("Ingrese nueva granja")
-    if nueva_granja and st.button("Agregar granja"):
-        st.session_state.granjas.append(nueva_granja)
-        st.success("✅ Granja agregada")
-        st.rerun()
-else:
-    st.session_state.granja_seleccionada = opcion_granja
 
 # =========================
 # CARGA DE ARCHIVOS
@@ -140,6 +117,30 @@ if archivo_dni and archivo_base:
     )
 
     st.success("✅ Cruce de trabajadores realizado")
+
+    # =========================
+    # 🏡 GRANJA (SOLO AGREGADO)
+    # =========================
+    st.subheader("🏡 Granja")
+
+    if "granjas" not in st.session_state:
+        st.session_state.granjas = [
+            "Chilco I", "Chilco II", "Chilco III", "Chilco IV"
+        ]
+
+    opcion_granja = st.selectbox(
+        "Seleccione la granja",
+        st.session_state.granjas + ["➕ Agregar"]
+    )
+
+    if opcion_granja == "➕ Agregar":
+        nueva_granja = st.text_input("Ingrese nueva granja")
+        if nueva_granja and st.button("Agregar granja"):
+            st.session_state.granjas.append(nueva_granja)
+            st.success("✅ Granja agregada")
+            st.rerun()
+    else:
+        st.session_state.granja_seleccionada = opcion_granja
 
     # =========================
     # TIPO DE PROCESO
