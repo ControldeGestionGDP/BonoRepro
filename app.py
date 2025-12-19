@@ -181,44 +181,42 @@ if archivo_dni and archivo_base:
         st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
 
     # =========================
-# AGREGAR / ELIMINAR TRABAJADOR
-# =========================
-st.subheader("➕ Agregar / ➖ Eliminar trabajador")
-with st.form("agregar_trabajador", clear_on_submit=True):
-    dni_new = st.text_input("DNI")
-    if dni_new.strip().zfill(8) in df_base["DNI"].values:
-        fila = df_base[df_base["DNI"]==dni_new.strip().zfill(8)].iloc[0]
-        nombre_new = fila["NOMBRE COMPLETO"]
-        cargo_new = fila["CARGO"]
-        # Info azulito solo
-        st.info(f"Nombre: {nombre_new} | Cargo: {cargo_new}")
-    submitted = st.form_submit_button("Agregar trabajador")
-    if submitted:
-        dni_new = dni_new.strip().zfill(8)
-        if dni_new not in st.session_state.tabla["DNI"].values:
-            fila = df_base[df_base["DNI"]==dni_new].iloc[0]
-            nuevo = {
-                "DNI": dni_new,
-                "NOMBRE COMPLETO": fila["NOMBRE COMPLETO"],
-                "CARGO": fila["CARGO"]
-            }
-            for lote in lotes:
-                nuevo[f"P_{lote}"] = 0.0
-                nuevo[f"F_{lote}"] = 0
-            st.session_state.tabla = pd.concat(
-                [st.session_state.tabla, pd.DataFrame([nuevo])],
-                ignore_index=True
-            )
-            st.session_state.df_edit = st.session_state.tabla.copy()
-            st.success("✅ Trabajador agregado")
+    # AGREGAR / ELIMINAR TRABAJADOR
+    # =========================
+    st.subheader("➕ Agregar / ➖ Eliminar trabajador")
+    with st.form("agregar_trabajador", clear_on_submit=True):
+        dni_new = st.text_input("DNI")
+        if dni_new.strip().zfill(8) in df_base["DNI"].values:
+            fila = df_base[df_base["DNI"]==dni_new.strip().zfill(8)].iloc[0]
+            # Solo info azulito
+            st.info(f"Nombre: {fila['NOMBRE COMPLETO']} | Cargo: {fila['CARGO']}")
+        submitted = st.form_submit_button("Agregar trabajador")
+        if submitted:
+            dni_new = dni_new.strip().zfill(8)
+            if dni_new not in st.session_state.tabla["DNI"].values:
+                fila = df_base[df_base["DNI"]==dni_new].iloc[0]
+                nuevo = {
+                    "DNI": dni_new,
+                    "NOMBRE COMPLETO": fila["NOMBRE COMPLETO"],
+                    "CARGO": fila["CARGO"]
+                }
+                for lote in lotes:
+                    nuevo[f"P_{lote}"] = 0.0
+                    nuevo[f"F_{lote}"] = 0
+                st.session_state.tabla = pd.concat(
+                    [st.session_state.tabla, pd.DataFrame([nuevo])],
+                    ignore_index=True
+                )
+                st.session_state.df_edit = st.session_state.tabla.copy()
+                st.success("✅ Trabajador agregado")
 
-eliminar_dni = st.text_input("DNI a eliminar")
-if st.button("Eliminar trabajador"):
-    eliminar_dni = eliminar_dni.strip().zfill(8)
-    if eliminar_dni in st.session_state.tabla["DNI"].values:
-        st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"]!=eliminar_dni]
-        st.session_state.df_edit = st.session_state.tabla.copy()
-        st.success("✅ Trabajador eliminado")
+    eliminar_dni = st.text_input("DNI a eliminar")
+    if st.button("Eliminar trabajador"):
+        eliminar_dni = eliminar_dni.strip().zfill(8)
+        if eliminar_dni in st.session_state.tabla["DNI"].values:
+            st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"]!=eliminar_dni]
+            st.session_state.df_edit = st.session_state.tabla.copy()
+            st.success("✅ Trabajador eliminado")
 
     # =========================
     # EDITAR PARTICIPACIÓN Y FALTAS
@@ -276,4 +274,3 @@ if st.button("Eliminar trabajador"):
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
