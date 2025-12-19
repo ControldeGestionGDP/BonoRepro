@@ -172,21 +172,24 @@ if archivo_dni and archivo_base:
     # AGREGAR / ELIMINAR TRABAJADOR
     # =========================
     st.subheader("➕ Agregar / ➖ Eliminar trabajador")
+
     with st.form("agregar_trabajador", clear_on_submit=True):
-        dni_new = st.text_input("DNI").strip().zfill(8)
-
-        # ✅ Autocompletar nombre y cargo si el DNI existe en base
-        if dni_new in df_base["DNI"].values:
-            nombre_new = df_base.loc[df_base["DNI"]==dni_new, "NOMBRE COMPLETO"].values[0]
-            cargo_new = df_base.loc[df_base["DNI"]==dni_new, "CARGO"].values[0]
-        else:
-            nombre_new = st.text_input("Nombre completo")
-            cargo_new = st.text_input("Cargo")
-
+        dni_new = st.text_input("DNI")
+        # PREVISUALIZAR DATOS AL INGRESAR DNI
+        nombre_new = ""
+        cargo_new = ""
+        if dni_new.strip().zfill(8) in df_base["DNI"].values:
+            fila = df_base[df_base["DNI"]==dni_new.strip().zfill(8)].iloc[0]
+            nombre_new = fila["NOMBRE COMPLETO"]
+            cargo_new = fila["CARGO"]
+            st.info(f"Nombre: {nombre_new} | Cargo: {cargo_new}")
+        nombre_input = st.text_input("Nombre completo", value=nombre_new)
+        cargo_input = st.text_input("Cargo", value=cargo_new)
         submitted = st.form_submit_button("Agregar trabajador")
         if submitted:
+            dni_new = dni_new.strip().zfill(8)
             if dni_new not in st.session_state.tabla["DNI"].values:
-                nuevo = {"DNI":dni_new,"NOMBRE COMPLETO":nombre_new,"CARGO":cargo_new}
+                nuevo = {"DNI":dni_new,"NOMBRE COMPLETO":nombre_input,"CARGO":cargo_input}
                 for lote in lotes:
                     nuevo[f"P_{lote}"] = 0.0
                     nuevo[f"F_{lote}"] = 0
@@ -204,7 +207,13 @@ if archivo_dni and archivo_base:
     # EDITAR PARTICIPACIÓN Y FALTAS
     # =========================
     st.subheader("✍️ Registro por trabajador y lote")
-    df_edit = st.data_editor(st.session_state.tabla, use_container_width=True, num_rows="fixed")
+    tabla_para_editar = st.session_state.tabla.copy()
+    df_edit = st.data_editor(
+        tabla_para_editar,
+        use_container_width=True,
+        num_rows="fixed",
+        key="data_editor_tabla"
+    )
     st.session_state.tabla = df_edit.copy()
 
     # =========================
