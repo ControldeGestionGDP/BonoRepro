@@ -52,7 +52,7 @@ if not st.session_state["ingresar"]:
 
         # LOGO (NO FALLA SI NO EXISTE)
         try:
-            st.image("logo_empresa.png", use_container_width=100)
+            st.image("logo_empresa.png", use_container_width=True)
         except:
             st.markdown(
                 "<h2 style='text-align:center;'>🏢 TU EMPRESA</h2>",
