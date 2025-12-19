@@ -3,7 +3,7 @@ import pandas as pd
 from io import BytesIO
 
 # =========================
-# CONFIGURACIÓN GLOBAL
+# CONFIG GENERAL
 # =========================
 st.set_page_config(
     page_title="Bono Reproductoras GDP",
@@ -11,28 +11,73 @@ st.set_page_config(
 )
 
 # =========================
+# ESTILOS CORPORATIVOS
+# =========================
+st.markdown(
+    """
+    <style>
+    .stButton>button {
+        background-color: #ef933d;
+        color: white;
+        border-radius: 8px;
+        height: 45px;
+        font-weight: bold;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #d97f2f;
+        color: white;
+    }
+    h1, h2, h3 {
+        color: #2a3c7c;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# =========================
 # PORTADA
 # =========================
 if "ingresar" not in st.session_state:
-    st.session_state.ingresar = False
+    st.session_state["ingresar"] = False
 
-if not st.session_state.ingresar:
+if not st.session_state["ingresar"]:
 
-    st.markdown(
-        """
-        <div style='text-align:center; padding-top:100px'>
-            <h1>🐔 BONO REPRODUCTORAS GDP</h1>
-            <h3>Sistema de cálculo y distribución de bonos</h3>
-            <p style="color:gray;">Uso interno corporativo</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 2, 1])
+
     with col2:
+
+        # LOGO (NO FALLA SI NO EXISTE)
+        try:
+            st.image("logo_empresa.png", use_container_width=True)
+        except:
+            st.markdown(
+                "<h2 style='text-align:center;'>🏢 TU EMPRESA</h2>",
+                unsafe_allow_html=True
+            )
+
+        st.markdown(
+            """
+            <div style="text-align:center; margin-top:30px;">
+                <h1>🐔 BONO REPRODUCTORAS GDP</h1>
+                <h3>Sistema de cálculo y distribución de bonos</h3>
+                <br>
+                <p style="color:gray; font-size:14px;">
+                    Desarrollado por<br>
+                    <strong>Gerencia de Control de Gestión</strong>
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
         if st.button("🚀 Ingresar al sistema", use_container_width=True):
-            st.session_state.ingresar = True
+            st.session_state["ingresar"] = True
             st.rerun()
 
     st.stop()
@@ -42,17 +87,19 @@ if not st.session_state.ingresar:
 # =========================
 st.title("🐔 BONO REPRODUCTORAS GDP")
 
-st.markdown("""
-**Flujo**
-1. Subir DNIs  
-2. Subir base de trabajadores  
-3. Definir lotes y montos  
-4. Registrar participación y faltas  
-5. Obtener cálculo final del bono  
-""")
+st.markdown(
+    """
+    **Flujo del sistema**
+    1. Subir DNIs  
+    2. Subir base de trabajadores  
+    3. Definir lotes y montos  
+    4. Registrar participación y faltas  
+    5. Obtener cálculo final del bono  
+    """
+)
 
 # =========================
-# TABLAS DE % POR CARGO
+# REGLAS POR CARGO
 # =========================
 REGLAS_PRODUCCION = {
     "GALPONERO": 1.00,
@@ -71,7 +118,7 @@ REGLAS_PRODUCCION = {
 REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 
 # =========================
-# DESCUENTO POR FALTAS (EXACTO A EXCEL)
+# DESCUENTO POR FALTAS
 # =========================
 DESCUENTO_FALTAS = {
     0: 1.00,
@@ -86,7 +133,7 @@ def factor_faltas(f):
         f = int(f)
     except:
         return 0.50
-    return DESCUENTO_FALTAS.get(f, 0.50)  # 5 o más
+    return DESCUENTO_FALTAS.get(f, 0.50)
 
 # =========================
 # CARGA DE ARCHIVOS
@@ -164,11 +211,10 @@ if archivo_dni and archivo_base:
             }
 
     # =========================
-    # COLUMNAS PARTICIPACIÓN Y FALTAS
+    # PARTICIPACIÓN Y FALTAS
     # =========================
     for lote in lotes:
         df[f"%_{lote}"] = 0.0
-    for lote in lotes:
         df[f"F_{lote}"] = 0
 
     st.subheader("✍️ Registro por trabajador y lote")
@@ -180,7 +226,7 @@ if archivo_dni and archivo_base:
     )
 
     # =========================
-    # CÁLCULO DE PAGOS (MISMA LÓGICA DE EXCEL)
+    # CÁLCULO DE PAGOS
     # =========================
     df_final = df_edit.copy()
     columnas_pago = []
@@ -198,14 +244,13 @@ if archivo_dni and archivo_base:
             if participacion <= 0:
                 return 0.0
 
-            pago = (
+            return round(
                 pct_cargo *
                 monto *
                 participacion *
-                factor_faltas(faltas)
+                factor_faltas(faltas),
+                2
             )
-
-            return round(pago, 2)
 
         col_pago = f"PAGO_{lote}"
         df_final[col_pago] = df_final.apply(pago_lote, axis=1)
