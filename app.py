@@ -141,18 +141,16 @@ if archivo_dni and archivo_base:
     # =========================
     if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
-        # Inicializar columnas P y F
         for lote in lotes:
             st.session_state.tabla[f"P_{lote}"] = 0.0
             st.session_state.tabla[f"F_{lote}"] = 0
     else:
-        # Agregar nuevas columnas si aparecen nuevos lotes
         for lote in lotes:
             if f"P_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"P_{lote}"] = 0.0
             if f"F_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"F_{lote}"] = 0
-        # Eliminar columnas de lotes que ya no existan
+        # Eliminar columnas de lotes antiguos
         for col in list(st.session_state.tabla.columns):
             if col.startswith("P_") or col.startswith("F_"):
                 lote_col = col.split("_")[1]
@@ -174,7 +172,6 @@ if archivo_dni and archivo_base:
     if "df_edit" not in st.session_state:
         st.session_state.df_edit = st.session_state.tabla.copy()
     else:
-        # Asegurarse de que df_edit tenga todas las columnas actuales
         for col in st.session_state.tabla.columns:
             if col not in st.session_state.df_edit.columns:
                 st.session_state.df_edit[col] = st.session_state.tabla[col]
@@ -188,7 +185,6 @@ if archivo_dni and archivo_base:
         dni_new = st.text_input("DNI")
         if dni_new.strip().zfill(8) in df_base["DNI"].values:
             fila = df_base[df_base["DNI"]==dni_new.strip().zfill(8)].iloc[0]
-            # Solo info azulito
             st.info(f"Nombre: {fila['NOMBRE COMPLETO']} | Cargo: {fila['CARGO']}")
         submitted = st.form_submit_button("Agregar trabajador")
         if submitted:
@@ -224,6 +220,7 @@ if archivo_dni and archivo_base:
     st.subheader("✍️ Registro por trabajador y lote")
     def actualizar_tabla():
         st.session_state.tabla = st.session_state.df_edit.copy()
+
     st.data_editor(
         st.session_state.df_edit,
         use_container_width=True,
@@ -233,31 +230,29 @@ if archivo_dni and archivo_base:
     )
 
     # =========================
-    # CÁLCULO DE PAGOS
+    # CÁLCULO Y RESULTADO FINAL DINÁMICO
     # =========================
-    df_final = st.session_state.tabla.copy()
-    columnas_pago = []
+    def calcular_resultado_final():
+        df_final = st.session_state.df_edit.copy()
+        columnas_pago = []
 
-    for lote in lotes:
-        def pago_lote(row):
-            cargo = str(row["CARGO"]).upper()
-            pct_cargo = reglas.get(cargo,0)
-            monto = config_lotes[lote]["MONTO"]
-            participacion = float(row[f"P_{lote}"])/100
-            faltas = row[f"F_{lote}"]
-            if participacion<=0: return 0.0
-            return round(pct_cargo*monto*participacion*factor_faltas(faltas),2)
-        col_pago = f"PAGO_{lote}"
-        df_final[col_pago] = df_final.apply(pago_lote,axis=1)
-        columnas_pago.append(col_pago)
+        for lote in lotes:
+            col_pago = f"PAGO_{lote}"
+            df_final[col_pago] = df_final.apply(lambda row: 
+                round(
+                    reglas.get(str(row["CARGO"]).upper(), 0) * 
+                    config_lotes[lote]["MONTO"] * 
+                    float(row[f"P_{lote}"])/100 * 
+                    factor_faltas(row[f"F_{lote}"]), 2
+                ) if float(row[f"P_{lote}"])>0 else 0.0, axis=1)
+            columnas_pago.append(col_pago)
 
-    df_final["TOTAL S/"] = df_final[columnas_pago].sum(axis=1)
+        df_final["TOTAL S/"] = df_final[columnas_pago].sum(axis=1)
+        return df_final
 
-    # =========================
-    # RESULTADO FINAL
-    # =========================
     st.subheader("💰 Resultado final")
-    st.dataframe(df_final,use_container_width=True)
+    df_final = calcular_resultado_final()
+    st.dataframe(df_final, use_container_width=True)
 
     # =========================
     # EXPORTACIÓN
