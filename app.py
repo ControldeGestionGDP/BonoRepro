@@ -141,18 +141,15 @@ if archivo_dni and archivo_base:
     # =========================
     if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
-        # Inicializar columnas P y F
         for lote in lotes:
             st.session_state.tabla[f"P_{lote}"] = 0.0
             st.session_state.tabla[f"F_{lote}"] = 0
     else:
-        # Agregar nuevas columnas si aparecen nuevos lotes
         for lote in lotes:
             if f"P_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"P_{lote}"] = 0.0
             if f"F_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"F_{lote}"] = 0
-        # Eliminar columnas de lotes que ya no existan
         for col in list(st.session_state.tabla.columns):
             if col.startswith("P_") or col.startswith("F_"):
                 lote_col = col.split("_")[1]
@@ -207,16 +204,21 @@ if archivo_dni and archivo_base:
                 )
                 st.session_state.df_edit = st.session_state.tabla.copy()
                 st.success("✅ Trabajador agregado")
-                st.rerun()  # refresca inmediatamente
+                st.rerun()
 
+    # =========================
+    # ELIMINAR TRABAJADOR CON MENSAJES
+    # =========================
     eliminar_dni = st.text_input("DNI a eliminar")
     if st.button("Eliminar trabajador"):
         eliminar_dni = eliminar_dni.strip().zfill(8)
         if eliminar_dni in st.session_state.tabla["DNI"].values:
             st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"]!=eliminar_dni]
             st.session_state.df_edit = st.session_state.tabla.copy()
-            st.success("✅ Trabajador eliminado")
-            st.rerun()  # refresca inmediatamente
+            st.success(f"✅ Trabajador con DNI {eliminar_dni} eliminado")
+            st.rerun()
+        else:
+            st.info(f"ℹ️ El trabajador con DNI {eliminar_dni} no existe o ya fue eliminado")
 
     # =========================
     # EDITAR PARTICIPACIÓN Y FALTAS
@@ -229,7 +231,6 @@ if archivo_dni and archivo_base:
         key="data_editor_tabla"
     )
 
-    # --- BOTÓN PARA GUARDAR CAMBIOS SIN ERROR ---
     if st.button("💾 Actualizar tabla 💰 Resultado final"):
         st.session_state.tabla = st.session_state.df_edit.copy()
         st.success("✅ Tabla actualizada")
