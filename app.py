@@ -7,10 +7,10 @@ from io import BytesIO
 # =========================
 st.set_page_config(
     page_title="Carga masiva por DNI",
-    layout="centered"
+    layout="wide"
 )
 
-st.title("📥 Carga masiva de colaboradores por DNI")
+st.title("🐔 BONO REPRODUCTORAS GDP")
 
 st.markdown("""
 **Flujo:**
@@ -135,3 +135,4 @@ if archivo_dni and archivo_base:
         file_name="resultado_cruce_dni.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
