@@ -3,7 +3,8 @@ import pandas as pd
 
 st.set_page_config(page_title="Cruce de DNI", layout="wide")
 
-st.title("📊 Cruce de DNI con Base de Trabajadores")
+st.title("🐔Bono Reproductoras GDP")
+ST.subtitle("Desarrollado por Control de Gestión")
 
 st.markdown("""
 **Pasos:**
@@ -75,3 +76,4 @@ if archivo_dni and archivo_trabajadores:
             file_name=archivo_salida,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+
