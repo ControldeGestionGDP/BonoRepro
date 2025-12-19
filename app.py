@@ -2,18 +2,24 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
+# =========================
+# CONFIGURACIÓN
+# =========================
 st.set_page_config(
-    page_title="Carga masiva por DNI",
+    page_title="Cruce de DNIs – Bono",
     layout="centered"
 )
 
-st.title("📥 Carga masiva de colaboradores por DNI")
+st.title("📥 Cruce masivo de DNIs – Base de Trabajadores")
 
 st.markdown("""
-**Flujo:**
-1. Subir archivo con DNIs
-2. Subir base maestra
-3. El sistema normaliza DNIs y cruza correctamente
+**Flujo del sistema**
+1. Subes un Excel SOLO con la columna **DNI**
+2. Subes la base maestra de trabajadores
+3. El sistema cruza y devuelve **Nombre y Cargo**
+✔ Conserva ceros iniciales  
+✔ Limpia basura invisible  
+✔ Diagnóstico incluido
 """)
 
 # =========================
@@ -22,8 +28,8 @@ st.markdown("""
 def limpiar_dni(col):
     return (
         col.astype(str)
-        .str.replace(r"\.0$", "", regex=True)
-        .str.replace(r"\D", "", regex=True)
+        .str.normalize("NFKD")
+        .str.replace(r"[^\d]", "", regex=True)
         .str.strip()
         .str.zfill(8)
     )
@@ -38,32 +44,59 @@ archivo_dni = st.file_uploader(
 )
 
 archivo_base = st.file_uploader(
-    "📊 Base de trabajadores",
+    "📊 Base maestra de trabajadores",
     type=["xlsx"],
     key="base"
 )
 
 if archivo_dni and archivo_base:
 
-    df_dni = pd.read_excel(archivo_dni)
-    df_base = pd.read_excel(archivo_base)
+    # =========================
+    # LECTURA SEGURA
+    # =========================
+    df_dni = pd.read_excel(archivo_dni, dtype=str)
+    df_base = pd.read_excel(archivo_base, dtype=str)
 
+    # Normalizar encabezados
     df_dni.columns = df_dni.columns.str.strip()
     df_base.columns = df_base.columns.str.strip()
 
+    # =========================
+    # VALIDACIONES
+    # =========================
     if "DNI" not in df_dni.columns:
-        st.error("❌ El archivo de DNIs debe tener una columna 'DNI'")
+        st.error("❌ El archivo de DNIs debe tener una columna llamada 'DNI'")
         st.stop()
 
-    if not {"DNI", "Nombre", "Cargo"}.issubset(df_base.columns):
-        st.error("❌ La base debe contener: DNI, Nombre, Cargo")
+    columnas_base = {"DNI", "Nombre", "Cargo"}
+    if not columnas_base.issubset(df_base.columns):
+        st.error("❌ La base debe contener las columnas: DNI, Nombre y Cargo")
         st.stop()
 
     # =========================
-    # NORMALIZACIÓN (CLAVE)
+    # LIMPIEZA DNI (CRÍTICO)
     # =========================
     df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
     df_base["DNI"] = limpiar_dni(df_base["DNI"])
+
+    # =========================
+    # DIAGNÓSTICO (CLAVE)
+    # =========================
+    st.subheader("🔍 Diagnóstico de coincidencias")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("Ejemplo DNIs archivo:")
+        st.write(df_dni["DNI"].head(10))
+
+    with col2:
+        st.write("Ejemplo DNIs base:")
+        st.write(df_base["DNI"].head(10))
+
+    st.write("Coincidencias encontradas:")
+    st.write(
+        df_dni["DNI"].isin(df_base["DNI"]).value_counts()
+    )
 
     # =========================
     # CRUCE
@@ -71,19 +104,29 @@ if archivo_dni and archivo_base:
     df_resultado = df_dni.merge(
         df_base[["DNI", "Nombre", "Cargo"]],
         on="DNI",
-        how="left"
+        how="left",
+        validate="m:1"
     )
 
     df_resultado["Estado"] = df_resultado["Nombre"].apply(
         lambda x: "OK" if pd.notna(x) else "NO ENCONTRADO"
     )
 
-    st.success("✅ Cruce realizado correctamente")
-    st.subheader("Vista previa")
+    # =========================
+    # RESULTADO
+    # =========================
+    st.success("✅ Cruce ejecutado correctamente")
+    st.subheader("📋 Resultado")
     st.dataframe(df_resultado.head(20))
 
+    # DNIs no encontrados
+    no_encontrados = df_resultado[df_resultado["Estado"] == "NO ENCONTRADO"]
+    if not no_encontrados.empty:
+        st.warning(f"⚠️ {len(no_encontrados)} DNIs no encontrados")
+        st.write(no_encontrados[["DNI"]].head(10))
+
     # =========================
-    # EXPORTAR
+    # EXPORTACIÓN
     # =========================
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -93,6 +136,6 @@ if archivo_dni and archivo_base:
     st.download_button(
         label="📤 Descargar archivo final",
         data=output,
-        file_name="resultado_cruce_dni.xlsx",
+        file_name="cruce_dni_resultado.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
