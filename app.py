@@ -207,14 +207,23 @@ if archivo_dni and archivo_base:
     # EDITAR PARTICIPACIÓN Y FALTAS
     # =========================
     st.subheader("✍️ Registro por trabajador y lote")
-    tabla_para_editar = st.session_state.tabla.copy()
-    df_edit = st.data_editor(
-        tabla_para_editar,
+
+    # Función para actualizar session_state al cambiar el Data Editor
+    def actualizar_tabla():
+        st.session_state.tabla = st.session_state.df_edit.copy()
+
+    # Copiar la tabla a una variable de session_state para editar
+    if "df_edit" not in st.session_state:
+        st.session_state.df_edit = st.session_state.tabla.copy()
+
+    # Data editor con on_change para guardar cambios al instante
+    st.data_editor(
+        st.session_state.df_edit,
         use_container_width=True,
         num_rows="fixed",
-        key="data_editor_tabla"
+        key="data_editor_tabla",
+        on_change=actualizar_tabla
     )
-    st.session_state.tabla = df_edit.copy()
 
     # =========================
     # CÁLCULO DE PAGOS
