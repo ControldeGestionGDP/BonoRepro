@@ -138,7 +138,7 @@ if archivo_dni and archivo_base:
                 st.session_state.tabla[f"F_{lote}"] = 0
         # Eliminar columnas de lotes que no existan
         for col in list(st.session_state.tabla.columns):
-            if col.startswith("%_") or col.startswith("F_"):
+            if col.startswith("P_") or col.startswith("F_"):
                 lote_col = col.split("_")[1]
                 if lote_col not in lotes:
                     st.session_state.tabla.drop(columns=[col], inplace=True)
@@ -237,3 +237,4 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
