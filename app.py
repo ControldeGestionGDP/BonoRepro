@@ -1,3 +1,39 @@
+# =========================
+# PORTADA
+# =========================
+if "ingresar" not in st.session_state:
+    st.session_state.ingresar = False
+
+if not st.session_state.ingresar:
+
+    st.set_page_config(
+        page_title="Bono Reproductoras GDP",
+        layout="wide"
+    )
+
+    st.markdown(
+        """
+        <div style='text-align:center; padding-top:80px'>
+            <h1>🐔 BONO REPRODUCTORAS GDP</h1>
+            <h3>Sistema de cálculo y distribución de bonos</h3>
+            <br><br>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        "<div style='text-align:center'>",
+        unsafe_allow_html=True
+    )
+
+    if st.button("🚀 Ingresar al sistema"):
+        st.session_state.ingresar = True
+        st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.stop()
 import streamlit as st
 import pandas as pd
 from io import BytesIO
@@ -172,3 +208,4 @@ if archivo_dni and archivo_base:
         file_name="bono_reproductoras_final.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
