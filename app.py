@@ -84,6 +84,30 @@ st.markdown("""
 """)
 
 # =========================
+# 🏡 GRANJA (NUEVO - SOLO ESTO SE AGREGA)
+# =========================
+st.subheader("🏡 Granja")
+
+if "granjas" not in st.session_state:
+    st.session_state.granjas = [
+        "Chilco I", "Chilco II", "Chilco III", "Chilco IV"
+    ]
+
+opcion_granja = st.selectbox(
+    "Seleccione la granja",
+    st.session_state.granjas + ["➕ Agregar"]
+)
+
+if opcion_granja == "➕ Agregar":
+    nueva_granja = st.text_input("Ingrese nueva granja")
+    if nueva_granja and st.button("Agregar granja"):
+        st.session_state.granjas.append(nueva_granja)
+        st.success("✅ Granja agregada")
+        st.rerun()
+else:
+    st.session_state.granja_seleccionada = opcion_granja
+
+# =========================
 # CARGA DE ARCHIVOS
 # =========================
 archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
@@ -162,7 +186,7 @@ if archivo_dni and archivo_base:
     st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols]
 
     # =========================
-    # SINCRONIZAR df_edit (FIX DEFINITIVO)
+    # SINCRONIZAR df_edit
     # =========================
     if "df_edit" not in st.session_state:
         st.session_state.df_edit = st.session_state.tabla.copy()
