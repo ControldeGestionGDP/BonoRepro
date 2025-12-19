@@ -13,8 +13,20 @@ st.markdown("""
 **Flujo:**
 1. Subir archivo con DNIs
 2. Subir base maestra
-3. El sistema conserva ceros iniciales y cruza correctamente
+3. El sistema normaliza DNIs y cruza correctamente
 """)
+
+# =========================
+# FUNCIÓN CLAVE
+# =========================
+def limpiar_dni(col):
+    return (
+        col.astype(str)
+        .str.replace(r"\.0$", "", regex=True)
+        .str.replace(r"\D", "", regex=True)
+        .str.strip()
+        .str.zfill(8)
+    )
 
 # =========================
 # CARGA DE ARCHIVOS
@@ -33,15 +45,12 @@ archivo_base = st.file_uploader(
 
 if archivo_dni and archivo_base:
 
-    # 🔑 LEER COMO TEXTO (CLAVE)
-    df_dni = pd.read_excel(archivo_dni, dtype={"DNI": str})
-    df_base = pd.read_excel(archivo_base, dtype={"DNI": str})
+    df_dni = pd.read_excel(archivo_dni)
+    df_base = pd.read_excel(archivo_base)
 
-    # Normalizar columnas
     df_dni.columns = df_dni.columns.str.strip()
     df_base.columns = df_base.columns.str.strip()
 
-    # Validaciones
     if "DNI" not in df_dni.columns:
         st.error("❌ El archivo de DNIs debe tener una columna 'DNI'")
         st.stop()
@@ -51,23 +60,10 @@ if archivo_dni and archivo_base:
         st.stop()
 
     # =========================
-    # LIMPIEZA Y NORMALIZACIÓN
+    # NORMALIZACIÓN (CLAVE)
     # =========================
-    df_dni["DNI"] = (
-        df_dni["DNI"]
-        .astype(str)
-        .str.replace(".0", "", regex=False)
-        .str.strip()
-        .str.zfill(8)
-    )
-
-    df_base["DNI"] = (
-        df_base["DNI"]
-        .astype(str)
-        .str.replace(".0", "", regex=False)
-        .str.strip()
-        .str.zfill(8)
-    )
+    df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
+    df_base["DNI"] = limpiar_dni(df_base["DNI"])
 
     # =========================
     # CRUCE
@@ -87,7 +83,7 @@ if archivo_dni and archivo_base:
     st.dataframe(df_resultado.head(20))
 
     # =========================
-    # EXPORTACIÓN
+    # EXPORTAR
     # =========================
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
