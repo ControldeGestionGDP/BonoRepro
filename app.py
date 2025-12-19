@@ -211,6 +211,22 @@ if archivo_dni and archivo_base:
             else:
                 st.warning("⚠️ Este trabajador ya está en el registro")
 
+    # =========================
+    # ELIMINAR TRABAJADOR
+    # =========================
+    st.subheader("❌ Eliminar trabajador por DNI")
+    dni_eliminar = st.text_input("Ingrese DNI para eliminar", key="eliminar_trabajador")
+    if st.button("Eliminar trabajador"):
+        dni_eliminar = dni_eliminar.strip().zfill(8)
+        if dni_eliminar in st.session_state.tabla["DNI"].values:
+            st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"] != dni_eliminar]
+            st.success(f"✅ Trabajador {dni_eliminar} eliminado del registro")
+        else:
+            st.warning("⚠️ DNI no encontrado en la tabla")
+
+    # =========================
+    # TABLA EDITABLE
+    # =========================
     st.subheader("✍️ Registro por trabajador y lote")
     df_edit = st.data_editor(
         st.session_state.tabla,
