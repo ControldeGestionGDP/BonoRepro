@@ -174,7 +174,6 @@ if archivo_dni and archivo_base:
     if "df_edit" not in st.session_state:
         st.session_state.df_edit = st.session_state.tabla.copy()
     else:
-        # Asegurarse de que df_edit tenga todas las columnas actuales
         for col in st.session_state.tabla.columns:
             if col not in st.session_state.df_edit.columns:
                 st.session_state.df_edit[col] = st.session_state.tabla[col]
@@ -208,7 +207,7 @@ if archivo_dni and archivo_base:
                 )
                 st.session_state.df_edit = st.session_state.tabla.copy()
                 st.success("✅ Trabajador agregado")
-                st.rerun()  # fuerza refresco inmediato
+                st.rerun()  # refresca inmediatamente
 
     eliminar_dni = st.text_input("DNI a eliminar")
     if st.button("Eliminar trabajador"):
@@ -217,20 +216,24 @@ if archivo_dni and archivo_base:
             st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"]!=eliminar_dni]
             st.session_state.df_edit = st.session_state.tabla.copy()
             st.success("✅ Trabajador eliminado")
-            st.rerun()  # fuerza refresco inmediato
+            st.rerun()  # refresca inmediatamente
 
     # =========================
     # EDITAR PARTICIPACIÓN Y FALTAS
     # =========================
     st.subheader("✍️ Registro por trabajador y lote")
-    # --- CAMBIO CLAVE: data_editor actualizado para reflejar cambios al instante ---
     st.session_state.df_edit = st.data_editor(
         st.session_state.df_edit,
         use_container_width=True,
         num_rows="fixed",
         key="data_editor_tabla"
     )
-    st.session_state.tabla = st.session_state.df_edit.copy()
+
+    # --- NUEVO BOTÓN PARA GUARDAR CAMBIOS ---
+    if st.button("💾 Actualizar tabla 💰 Resultado final"):
+        st.session_state.tabla = st.session_state.df_edit.copy()
+        st.success("✅ Tabla actualizada")
+        st.experimental_rerun()
 
     # =========================
     # CÁLCULO DE PAGOS
