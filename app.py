@@ -71,7 +71,7 @@ REGLAS_PRODUCCION = {
 REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 
 # =========================
-# DESCUENTO POR FALTAS (EXACTO A EXCEL)
+# DESCUENTO POR FALTAS
 # =========================
 DESCUENTO_FALTAS = {
     0: 1.00,
@@ -86,7 +86,7 @@ def factor_faltas(f):
         f = int(f)
     except:
         return 0.50
-    return DESCUENTO_FALTAS.get(f, 0.50)  # 5 o más
+    return DESCUENTO_FALTAS.get(f, 0.50)
 
 # =========================
 # CARGA DE ARCHIVOS
@@ -141,14 +141,11 @@ if archivo_dni and archivo_base:
         "Lotes (ejemplo: 211-212-213)",
         "211-212-213"
     )
-
     lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
     st.subheader("🧬 Configuración por lote")
-
     config_lotes = {}
     cols = st.columns(len(lotes))
-
     for i, lote in enumerate(lotes):
         with cols[i]:
             genetica = st.text_input(f"Genética {lote}", "ROSS")
@@ -158,82 +155,72 @@ if archivo_dni and archivo_base:
                 value=1000.0,
                 step=50.0
             )
-            config_lotes[lote] = {
-                "GENETICA": genetica.upper(),
-                "MONTO": monto
-            }
+            config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
 
     # =========================
-    # COLUMNAS PARTICIPACIÓN Y FALTAS
-    # =========================
-    for lote in lotes:
-        df[f"%_{lote}"] = 0.0
-        df[f"F_{lote}"] = 0
-
-    # =========================
-    # INICIALIZAR SESSION_STATE PARA TABLA EDITABLE
+    # SESSION STATE DE LA TABLA
     # =========================
     if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
+    else:
+        # Ajustar columnas dinámicas según lotes
+        for lote in lotes:
+            if f"%_{lote}" not in st.session_state.tabla.columns:
+                st.session_state.tabla[f"%_{lote}"] = 0.0
+            if f"F_{lote}" not in st.session_state.tabla.columns:
+                st.session_state.tabla[f"F_{lote}"] = 0
+        # Eliminar columnas de lotes que ya no existan
+        for col in list(st.session_state.tabla.columns):
+            if col.startswith("%_") or col.startswith("F_"):
+                lote_col = col.split("_")[1]
+                if lote_col not in lotes:
+                    st.session_state.tabla.drop(columns=[col], inplace=True)
 
-    # =========================
-    # BUSCAR Y AGREGAR TRABAJADOR
-    # =========================
-    st.subheader("🔍 Buscar y agregar trabajador por DNI")
-    dni_buscar = st.text_input("Ingrese DNI para buscar", key="buscar_trabajador")
-
-    if st.button("Buscar trabajador"):
-        dni_buscar = dni_buscar.strip().zfill(8)
-        encontrado = df_base[df_base["DNI"] == dni_buscar]
-        if not encontrado.empty:
-            st.session_state.trabajador_encontrado = encontrado.copy()
-        else:
-            st.warning("⚠️ DNI no encontrado en la base de trabajadores")
-            if "trabajador_encontrado" in st.session_state:
-                del st.session_state.trabajador_encontrado
-
-    # Mostrar encontrado y agregar
-    if "trabajador_encontrado" in st.session_state:
-        st.dataframe(st.session_state.trabajador_encontrado, use_container_width=True)
-        if st.button(f"💾 Agregar trabajador {dni_buscar}"):
-            nuevo = st.session_state.trabajador_encontrado.copy()
-            # Asegurar que todas las columnas de lotes existen
-            for lote in lotes:
-                if f"%_{lote}" not in nuevo.columns:
-                    nuevo[f"%_{lote}"] = 0.0
-                if f"F_{lote}" not in nuevo.columns:
-                    nuevo[f"F_{lote}"] = 0
-            # Evitar duplicados
-            if dni_buscar not in st.session_state.tabla["DNI"].values:
-                st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
-                st.success(f"✅ Trabajador {dni_buscar} agregado al registro")
-                del st.session_state.trabajador_encontrado
-            else:
-                st.warning("⚠️ Este trabajador ya está en el registro")
-
-    # =========================
-    # ELIMINAR TRABAJADOR
-    # =========================
-    st.subheader("❌ Eliminar trabajador por DNI")
-    dni_eliminar = st.text_input("Ingrese DNI para eliminar", key="eliminar_trabajador")
-    if st.button("Eliminar trabajador"):
-        dni_eliminar = dni_eliminar.strip().zfill(8)
-        if dni_eliminar in st.session_state.tabla["DNI"].values:
-            st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"] != dni_eliminar]
-            st.success(f"✅ Trabajador {dni_eliminar} eliminado del registro")
-        else:
-            st.warning("⚠️ DNI no encontrado en la tabla")
-
-    # =========================
-    # TABLA EDITABLE
-    # =========================
     st.subheader("✍️ Registro por trabajador y lote")
     df_edit = st.data_editor(
         st.session_state.tabla,
         use_container_width=True,
         num_rows="fixed"
     )
-    st.session_state.tabla = df_edit.copy()  # guardar cambios
+    st.session_state.tabla = df_edit.copy()
+
+    # =========================
+    # ELIMINAR TRABAJADOR
+    # =========================
+    st.subheader("✂️ Eliminar trabajador")
+    dni_eliminar = st.text_input("Ingrese DNI a eliminar", key="eliminar")
+    if st.button("Eliminar trabajador"):
+        if dni_eliminar.strip():
+            dni_eliminar = dni_eliminar.zfill(8)
+            if dni_eliminar in st.session_state.tabla["DNI"].values:
+                st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"] != dni_eliminar]
+                st.success(f"✅ Trabajador con DNI {dni_eliminar} eliminado")
+            else:
+                st.warning("⚠️ DNI no encontrado en la tabla")
+
+    # =========================
+    # BUSCAR Y AGREGAR TRABAJADOR
+    # =========================
+    st.subheader("🔍 Buscar trabajador por DNI")
+    dni_buscar = st.text_input("Ingrese DNI para buscar", key="buscar")
+    if st.button("Buscar trabajador"):
+        if dni_buscar.strip():
+            dni_buscar = dni_buscar.zfill(8)
+            encontrado = df_base[df_base["DNI"] == dni_buscar]
+            if not encontrado.empty:
+                st.dataframe(encontrado, use_container_width=True)
+                if st.button("➕ Agregar trabajador a la tabla"):
+                    if dni_buscar not in st.session_state.tabla["DNI"].values:
+                        nuevo = encontrado.copy()
+                        for lote in lotes:
+                            nuevo[f"%_{lote}"] = 0.0
+                            nuevo[f"F_{lote}"] = 0
+                        st.session_state.tabla = pd.concat([st.session_state.tabla, nuevo], ignore_index=True)
+                        st.success(f"✅ Trabajador {dni_buscar} agregado a la tabla")
+                    else:
+                        st.warning("⚠️ El trabajador ya está en la tabla")
+            else:
+                st.warning("⚠️ DNI no encontrado en la base de trabajadores")
 
     # =========================
     # CÁLCULO DE PAGOS
@@ -242,15 +229,12 @@ if archivo_dni and archivo_base:
     columnas_pago = []
 
     for lote in lotes:
-
         def pago_lote(row):
             cargo = str(row["CARGO"]).upper()
             pct_cargo = reglas.get(cargo, 0)
-            # Manejar si no existen las columnas por seguridad
+            monto = config_lotes[lote]["MONTO"]
             participacion = float(row.get(f"%_{lote}", 0)) / 100
             faltas = row.get(f"F_{lote}", 0)
-            monto = config_lotes[lote]["MONTO"]
-
             if participacion <= 0:
                 return 0.0
             pago = pct_cargo * monto * participacion * factor_faltas(faltas)
