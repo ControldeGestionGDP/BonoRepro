@@ -224,7 +224,6 @@ if archivo_dni and archivo_base:
     st.subheader("✍️ Registro por trabajador y lote")
     def actualizar_tabla():
         st.session_state.tabla = st.session_state.df_edit.copy()
-
     st.data_editor(
         st.session_state.df_edit,
         use_container_width=True,
