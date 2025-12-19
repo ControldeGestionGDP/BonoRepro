@@ -17,9 +17,12 @@ st.markdown("""
 1. Subir DNIs  
 2. Subir base de trabajadores  
 3. Definir lotes  
-4. Ingresar participación y faltas  
-5. Descargar archivo final  
+4. Configurar genética y monto  
+5. Ingresar participación y faltas  
+6. Descargar archivo final  
 """)
+
+DESCUENTO_FALTA = 50  # S/ por falta (editable)
 
 # =========================
 # CARGA DE ARCHIVOS
@@ -94,11 +97,29 @@ if archivo_dni and archivo_base:
         st.stop()
 
     # =========================
+    # PANEL GENÉTICA Y MONTO
+    # =========================
+    st.subheader("🧬 Configuración por lote")
+
+    config_lotes = {}
+    cols = st.columns(len(lotes))
+
+    for i, lote in enumerate(lotes):
+        with cols[i]:
+            genetica = st.text_input(f"Genética {lote}", "ROSS")
+            monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0)
+            config_lotes[lote] = {
+                "GENETICA": genetica,
+                "MONTO": monto
+            }
+
+    # =========================
     # CREAR COLUMNAS DINÁMICAS
     # =========================
     for lote in lotes:
-        df[f"P.{lote}"] = ""
-        df[f"F.{lote}"] = ""
+        df[f"%_{lote}"] = 0.0
+        df[f"F_{lote}"] = 0
+        df[f"PAGO_{lote}"] = 0.0
 
     st.subheader("✍️ Registro por trabajador y lote")
 
@@ -109,11 +130,31 @@ if archivo_dni and archivo_base:
     )
 
     # =========================
+    # CÁLCULO DE PAGOS
+    # =========================
+    for lote in lotes:
+        monto = config_lotes[lote]["MONTO"]
+
+        df_editado[f"PAGO_{lote}"] = (
+            df_editado[f"%_{lote}"].astype(float) / 100 * monto
+            - df_editado[f"F_{lote}"].astype(float) * DESCUENTO_FALTA
+        )
+
+        df_editado[f"PAGO_{lote}"] = df_editado[f"PAGO_{lote}"].clip(lower=0)
+
+    pago_cols = [f"PAGO_{lote}" for lote in lotes]
+    df_editado["TOTAL S/"] = df_editado[pago_cols].sum(axis=1)
+
+    st.subheader("💰 Resultado final")
+    st.dataframe(df_editado, use_container_width=True)
+
+    # =========================
     # EXPORTACIÓN
     # =========================
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_editado.to_excel(writer, index=False)
+        df_editado.to_excel(writer, index=False, sheet_name="Detalle")
+        pd.DataFrame(config_lotes).T.to_excel(writer, sheet_name="Configuracion_Lotes")
 
     output.seek(0)
 
