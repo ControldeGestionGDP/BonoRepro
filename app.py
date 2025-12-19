@@ -171,13 +171,20 @@ if archivo_dni and archivo_base:
     for lote in lotes:
         df[f"F_{lote}"] = 0
 
-    st.subheader("✍️ Registro por trabajador y lote")
+    # =========================
+    # INICIALIZAR SESSION_STATE PARA TABLA EDITABLE
+    # =========================
+    if "tabla" not in st.session_state:
+        st.session_state.tabla = df.copy()
 
+    st.subheader("✍️ Registro por trabajador y lote")
     df_edit = st.data_editor(
-        df,
+        st.session_state.tabla,
         use_container_width=True,
         num_rows="fixed"
     )
+    # Guardar cambios del editor en session_state
+    st.session_state.tabla = df_edit.copy()
 
     # =========================
     # ELIMINAR TRABAJADOR
@@ -187,12 +194,11 @@ if archivo_dni and archivo_base:
     if st.button("Eliminar trabajador"):
         if dni_eliminar.strip():
             dni_eliminar = dni_eliminar.zfill(8)
-            if dni_eliminar in df_edit["DNI"].values:
-                df_edit = df_edit[df_edit["DNI"] != dni_eliminar]
+            if dni_eliminar in st.session_state.tabla["DNI"].values:
+                st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"] != dni_eliminar]
                 st.success(f"✅ Trabajador con DNI {dni_eliminar} eliminado")
             else:
                 st.warning("⚠️ DNI no encontrado en la tabla")
-        st.experimental_rerun()
 
     # =========================
     # BUSCAR TRABAJADOR
@@ -211,7 +217,7 @@ if archivo_dni and archivo_base:
     # =========================
     # CÁLCULO DE PAGOS (MISMA LÓGICA DE EXCEL)
     # =========================
-    df_final = df_edit.copy()
+    df_final = st.session_state.tabla.copy()
     columnas_pago = []
 
     for lote in lotes:
