@@ -34,6 +34,25 @@ if not st.session_state.ingresar:
     st.stop()
 
 # =========================
+# TABLAS DE % POR CARGO
+# =========================
+REGLAS_PRODUCCION = {
+    "GALPONERO": 1.00,
+    "AYUDANTE GALPONERO": 0.125,
+    "VOLANTE DESCANSERO": 0.125,
+    "VOLANTE ALIMENTO": 0.125,
+    "BIOSEGURIDAD": 0.0625,
+    "GUARDIANES": 0.0625,
+    "CAPORAL": 0.125,
+    "SUPERVISOR": 1.00,
+    "MANTENIMIENTO": 0.0,
+    "GRADING": 0.08,
+    "VACUNADORES": 0.07
+}
+
+REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
+
+# =========================
 # ELECCIÓN DE OPCIÓN DE INICIO
 # =========================
 st.subheader("Seleccione cómo desea iniciar")
@@ -303,4 +322,5 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
 
