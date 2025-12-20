@@ -126,9 +126,58 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 # =========================
 # SI NO HAY DATOS, DETENER
 # =========================
-if df is None:
-    st.warning("Suba un archivo para continuar")
-    st.stop()
+elif opcion_inicio == "📂 Cargar Excel previamente generado":
+    archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
+    if archivo_prev:
+        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
+        fila_inicio = None
+        for i, row in df_prev_raw.iterrows():
+            if "DNI" in row.values:
+                fila_inicio = i
+                break
+        if fila_inicio is None:
+            st.error("❌ No se encontró la tabla de trabajadores en el Excel")
+        else:
+            # Carga del DataFrame principal
+            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
+            df.columns = df.columns.str.strip().str.upper()
+            if "DNI" in df.columns:
+                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
+            
+            st.success("✅ Excel previamente cargado")
+            
+            # --- NUEVO: extraer datos de configuración ---
+            df_encabezado = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, nrows=10)
+            # Granja
+            try:
+                granja_val = df_encabezado.loc[df_encabezado['Campo']=="Granja", 'Valor'].values[0]
+                st.session_state.granja_seleccionada = granja_val
+            except:
+                st.session_state.granja_seleccionada = None
+            # Tipo de proceso
+            try:
+                tipo_val = df_encabezado.loc[df_encabezado['Campo']=="Tipo de Proceso", 'Valor'].values[0]
+            except:
+                tipo_val = "PRODUCCIÓN"
+            tipo = tipo_val
+            st.session_state.tipo = tipo
+            # Lotes
+            try:
+                lotes_val = df_encabezado.loc[df_encabezado['Campo']=="Lotes", 'Valor'].values[0]
+                lotes = [l.strip() for l in lotes_val.split(",") if l.strip()]
+            except:
+                lotes = []
+            st.session_state.lotes = lotes
+            # Configuración por lote
+            df_lotes = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, skiprows=3, nrows=len(lotes))
+            config_lotes = {}
+            for l in lotes:
+                try:
+                    fila_l = df_lotes[df_lotes["Lote"]==l].iloc[0]
+                    config_lotes[l] = {"GENETICA": fila_l["Genética"].upper(), "MONTO": float(fila_l["Monto S/"])}
+                except:
+                    config_lotes[l] = {"GENETICA":"ROSS","MONTO":1000.0}
+            st.session_state.config_lotes = config_lotes
 
 # =========================
 # =========================
@@ -307,3 +356,4 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
