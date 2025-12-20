@@ -34,6 +34,15 @@ if not st.session_state.ingresar:
     st.stop()
 
 # =========================
+# OPCIONES INICIO
+# =========================
+st.subheader("Seleccione una opción para continuar")
+opcion_inicio = st.selectbox(
+    "Opciones",
+    ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"]
+)
+
+# =========================
 # TABLAS DE % POR CARGO
 # =========================
 REGLAS_PRODUCCION = {
@@ -51,88 +60,88 @@ REGLAS_PRODUCCION = {
 }
 REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 
-# =========================
-# DESCUENTO POR FALTAS
-# =========================
 DESCUENTO_FALTAS = {0:1.00,1:0.90,2:0.80,3:0.70,4:0.60}
 def factor_faltas(f):
     try:
         f = int(f)
     except:
         return 0.50
-    return DESCUENTO_FALTAS.get(f, 0.50)
+    return DESCUENTO_FALTAS.get(f,0.50)
 
 # =========================
-# CARGA DE ARCHIVOS
+# INICIAR DESDE CERO
 # =========================
-st.subheader("📂 Subir archivos (opcional)")
+if opcion_inicio == "➕ Iniciar desde cero":
+    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
+    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
 
-archivo_prev = st.file_uploader("Subir Excel previamente generado", type=["xlsx"])
-archivo_dni = st.file_uploader("Excel con DNIs", type=["xlsx"])
-archivo_base = st.file_uploader("Base de trabajadores", type=["xlsx"])
+    if archivo_dni and archivo_base:
+        df_dni = pd.read_excel(archivo_dni, dtype=str)
+        df_base = pd.read_excel(archivo_base, dtype=str)
 
-# =========================
-# FUNCIÓN PARA LIMPIAR DNI
-# =========================
-def limpiar_dni(s):
-    return (
-        s.astype(str)
-        .str.replace("'", "", regex=False)
-        .str.replace(".0", "", regex=False)
-        .str.strip()
-        .str.zfill(8)
-    )
+        df_dni.columns = df_dni.columns.str.strip().str.upper()
+        df_base.columns = df_base.columns.str.strip().str.upper()
 
-# =========================
-# OPCIÓN 1: CARGAR EXCEL PREVIO
-# =========================
-if archivo_prev:
-    df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
-    fila_inicio = None
-    for i, row in df_prev_raw.iterrows():
-        if "DNI" in row.values:
-            fila_inicio = i
-            break
-    if fila_inicio is None:
-        st.error("❌ No se encontró la tabla de trabajadores en el Excel")
-    else:
-        df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
-        df.columns = df.columns.str.strip().str.upper()
-        if "DNI" in df.columns:
-            df["DNI"] = limpiar_dni(df["DNI"])
-        else:
-            st.error("❌ La columna DNI no existe en el bloque de trabajadores")
+        def limpiar_dni(s):
+            return (
+                s.astype(str)
+                .str.replace("'", "", regex=False)
+                .str.replace(".0", "", regex=False)
+                .str.strip()
+                .str.zfill(8)
+            )
+
+        df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
+        df_base["DNI"] = limpiar_dni(df_base["DNI"])
+        df_base = df_base.drop_duplicates("DNI")
+
+        df = df_dni.merge(
+            df_base[["DNI","NOMBRE COMPLETO","CARGO"]],
+            on="DNI",
+            how="left"
+        )
+
         st.session_state.tabla = df.copy()
-        st.success("✅ Excel previamente cargado")
+        st.session_state.df_base = df_base.copy()
+        st.success("✅ Cruce de trabajadores realizado")
 
 # =========================
-# OPCIÓN 2: INICIAR DESDE CERO
+# CARGAR EXCEL PREVIO
 # =========================
-elif archivo_dni and archivo_base:
-    df_dni = pd.read_excel(archivo_dni, dtype=str)
-    df_base = pd.read_excel(archivo_base, dtype=str)
-
-    df_dni.columns = df_dni.columns.str.strip().str.upper()
-    df_base.columns = df_base.columns.str.strip().str.upper()
-    df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
-    df_base["DNI"] = limpiar_dni(df_base["DNI"])
-    df_base = df_base.drop_duplicates("DNI")
-
-    df = df_dni.merge(
-        df_base[["DNI","NOMBRE COMPLETO","CARGO"]],
-        on="DNI",
-        how="left"
-    )
-    st.session_state.tabla = df.copy()
-    st.session_state.df_base = df_base.copy()
-    st.success("✅ Cruce de trabajadores realizado")
+elif opcion_inicio == "📂 Cargar Excel previamente generado":
+    archivo_prev = st.file_uploader("Subir Excel previamente generado", type=["xlsx"])
+    if archivo_prev:
+        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
+        fila_inicio = None
+        for i, row in df_prev_raw.iterrows():
+            if "DNI" in row.values:
+                fila_inicio = i
+                break
+        if fila_inicio is None:
+            st.error("❌ No se encontró la tabla de trabajadores en el Excel")
+        else:
+            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
+            df.columns = df.columns.str.strip().str.upper()
+            if "DNI" in df.columns:
+                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
+            else:
+                st.error("❌ La columna DNI no existe en el bloque de trabajadores")
+            st.session_state.tabla = df.copy()
+            st.success("✅ Excel previamente cargado")
 
 # =========================
-# SI NO HAY DATOS, SALIR
+# SEGUIMOS SI HAY DATOS
 # =========================
 if "tabla" not in st.session_state:
     st.warning("Sube un archivo de DNIs + Base de trabajadores o un Excel previamente generado")
     st.stop()
+
+# =========================
+# AQUÍ SIGUE EL RESTO DEL FLUJO ORIGINAL
+# Granjas, lotes, agregar/eliminar trabajador, edición, cálculo y exportación
+# =========================
+
+st.write("Aquí continua el flujo original de granjas, lotes, edición y cálculo...")
 
 # =========================
 # 🏡 GRANJA
@@ -320,3 +329,4 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
