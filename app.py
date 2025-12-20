@@ -34,6 +34,15 @@ if not st.session_state.ingresar:
     st.stop()
 
 # =========================
+# ELECCIÓN DE OPCIÓN DE INICIO
+# =========================
+st.subheader("Seleccione cómo desea iniciar")
+opcion_inicio = st.selectbox(
+    "Opciones",
+    ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"]
+)
+
+# =========================
 # TABLAS DE % POR CARGO
 # =========================
 REGLAS_PRODUCCION = {
@@ -49,31 +58,32 @@ REGLAS_PRODUCCION = {
     "GRADING": 0.08,
     "VACUNADORES": 0.07
 }
-
 REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 
-# =========================
-# ELECCIÓN DE OPCIÓN DE INICIO
-# =========================
-st.subheader("Seleccione cómo desea iniciar")
-opcion_inicio = st.selectbox(
-    "Opciones",
-    ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"]
-)
+DESCUENTO_FALTAS = {0:1.0, 1:0.90, 2:0.80, 3:0.70, 4:0.60}
+def factor_faltas(f):
+    try:
+        f = int(f)
+    except:
+        return 0.50
+    return DESCUENTO_FALTAS.get(f, 0.50)
 
 # =========================
-# CARGA DE DATOS (LÓGICA MEJORADA)
+# CARGA DE ARCHIVOS SEGÚN OPCIÓN
 # =========================
 df = None
-lotes_detectados = "211-212-213"  # valor por defecto
+df_base = None
 
 if opcion_inicio == "➕ Iniciar desde cero":
     archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
     archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
-
+    
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
-        df_base_full = pd.read_excel(archivo_base, dtype=str)
+        df_base = pd.read_excel(archivo_base, dtype=str)
+
+        df_dni.columns = df_dni.columns.str.strip().str.upper()
+        df_base.columns = df_base.columns.str.strip().str.upper()
 
         def limpiar_dni(s):
             return (
@@ -85,58 +95,33 @@ if opcion_inicio == "➕ Iniciar desde cero":
             )
 
         df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
-        df_base_full["DNI"] = limpiar_dni(df_base_full["DNI"])
-        df_base_full = df_base_full.drop_duplicates("DNI")
+        df_base["DNI"] = limpiar_dni(df_base["DNI"])
+        df_base = df_base.drop_duplicates("DNI")
 
         df = df_dni.merge(
-            df_base_full[["DNI", "NOMBRE COMPLETO", "CARGO"]],
+            df_base[["DNI","NOMBRE COMPLETO","CARGO"]],
             on="DNI",
             how="left"
         )
-
-        st.success("✅ Cruce realizado. Configure los lotes abajo.")
+        st.success("✅ Cruce de trabajadores realizado")
 
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
-
     if archivo_prev:
-        df_raw = pd.read_excel(archivo_prev, sheet_name=0, header=None, dtype=str)
-
-        fila_dni = None
-        for i, row in df_raw.iterrows():
+        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
+        fila_inicio = None
+        for i, row in df_prev_raw.iterrows():
             if "DNI" in row.values:
-                fila_dni = i
+                fila_inicio = i
                 break
-
-        if fila_dni is not None:
-            df_cargado = pd.read_excel(archivo_prev, sheet_name=0, header=fila_dni)
-            df_cargado.columns = df_cargado.columns.str.strip().str.upper()
-
-            df_cargado["DNI"] = (
-                df_cargado["DNI"]
-                .astype(str)
-                .str.replace(".0", "", regex=False)
-                .str.zfill(8)
-            )
-
-            columnas_a_mantener = [
-                c for c in df_cargado.columns
-                if not (c.startswith("PAGO_") or c == "TOTAL S/")
-            ]
-            df = df_cargado[columnas_a_mantener]
-
-            lotes_list = [c.replace("P_", "") for c in df.columns if c.startswith("P_")]
-            if lotes_list:
-                lotes_detectados = "-".join(lotes_list)
-
-            st.success(f"✅ Excel cargado. Lotes detectados: {lotes_detectados}")
-
+        if fila_inicio is None:
+            st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            st.error("❌ No se encontró la columna 'DNI' en el archivo.")
-
-if df is None:
-    st.warning("Suba los archivos para activar el sistema")
-    st.stop()
+            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
+            df.columns = df.columns.str.strip().str.upper()
+            if "DNI" in df.columns:
+                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
+            st.success("✅ Excel previamente cargado")
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -322,5 +307,3 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
-
-
