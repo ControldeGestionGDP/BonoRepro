@@ -108,20 +108,57 @@ if opcion_inicio == "➕ Iniciar desde cero":
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
     if archivo_prev:
-        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
+        df_prev_raw = pd.read_excel(
+            archivo_prev,
+            sheet_name="BONO_REPRODUCTORAS",
+            dtype=str,
+            header=None
+        )
+
         fila_inicio = None
         for i, row in df_prev_raw.iterrows():
-            if "DNI" in row.values:
+            if row.astype(str).str.contains("DNI", na=False).any():
                 fila_inicio = i
                 break
+
         if fila_inicio is None:
             st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
-            df.columns = df.columns.str.strip().str.upper()
-            if "DNI" in df.columns:
-                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
-            st.success("✅ Excel previamente cargado")
+            df_temp = pd.read_excel(
+                archivo_prev,
+                sheet_name="BONO_REPRODUCTORAS",
+                dtype=str,
+                header=fila_inicio
+            )
+            df_temp.columns = df_temp.columns.str.strip().str.upper()
+
+            # Limpiar DNI
+            if "DNI" in df_temp.columns:
+                df_temp["DNI"] = (
+                    df_temp["DNI"]
+                    .astype(str)
+                    .str.replace("'", "", regex=False)
+                    .str.replace(".0", "", regex=False)
+                    .str.zfill(8)
+                )
+
+            # 🔑 quitar columnas calculadas
+            columnas_validas = [
+                c for c in df_temp.columns
+                if not (c.startswith("PAGO_") or c == "TOTAL S/")
+            ]
+            df = df_temp[columnas_validas].copy()
+
+            # 🔑 detectar lotes desde P_XXX
+            lotes_detectados = [
+                c.replace("P_", "") for c in df.columns if c.startswith("P_")
+            ]
+            if lotes_detectados:
+                st.session_state.lotes_detectados = "-".join(lotes_detectados)
+            else:
+                st.session_state.lotes_detectados = "211-212-213"
+
+            st.success("✅ Excel previamente cargado y reconocido correctamente")
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -307,3 +344,4 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
