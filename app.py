@@ -339,17 +339,20 @@ if archivo_dni and archivo_base:
 
     st.plotly_chart(fig, use_container_width=True)
 
-        # =========================
-    # EXPORTAR (ESTRUCTURADO COMPLETO)
+            # =========================
+    # EXPORTAR (UNA SOLA HOJA)
     # =========================
     output = BytesIO()
 
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
 
+        sheet_name = "BONO_REPRODUCTORAS"
+        fila_actual = 0
+
         # -------------------------
-        # HOJA 1: RESUMEN GENERAL
+        # ENCABEZADO GENERAL
         # -------------------------
-        resumen = pd.DataFrame({
+        encabezado = pd.DataFrame({
             "Campo": [
                 "Granja",
                 "Tipo de Proceso",
@@ -364,14 +367,17 @@ if archivo_dni and archivo_base:
             ]
         })
 
-        resumen.to_excel(
+        encabezado.to_excel(
             writer,
-            sheet_name="Resumen General",
-            index=False
+            sheet_name=sheet_name,
+            index=False,
+            startrow=fila_actual
         )
 
+        fila_actual += len(encabezado) + 2
+
         # -------------------------
-        # HOJA 2: CONFIGURACIÓN LOTES
+        # CONFIGURACIÓN DE LOTES
         # -------------------------
         df_lotes = pd.DataFrame([
             {
@@ -384,26 +390,21 @@ if archivo_dni and archivo_base:
 
         df_lotes.to_excel(
             writer,
-            sheet_name="Configuración Lotes",
-            index=False
+            sheet_name=sheet_name,
+            index=False,
+            startrow=fila_actual
         )
 
-        # -------------------------
-        # HOJA 3: REGISTRO TRABAJADORES
-        # -------------------------
-        st.session_state.tabla.to_excel(
-            writer,
-            sheet_name="Registro Trabajadores",
-            index=False
-        )
+        fila_actual += len(df_lotes) + 3
 
         # -------------------------
-        # HOJA 4: CÁLCULO FINAL BONOS
+        # DETALLE COMPLETO TRABAJADORES
         # -------------------------
         df_final.to_excel(
             writer,
-            sheet_name="Cálculo Bonos",
-            index=False
+            sheet_name=sheet_name,
+            index=False,
+            startrow=fila_actual
         )
 
     st.download_button(
