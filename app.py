@@ -69,19 +69,15 @@ def factor_faltas(f):
     return DESCUENTO_FALTAS.get(f, 0.50)
 
 # =========================
-# CARGA DE ARCHIVOS
+# CARGA DE ARCHIVOS SEGÚN OPCIÓN
 # =========================
 df = None
 df_base = None
 
-# valor por defecto
-if "lotes_detectados" not in st.session_state:
-    st.session_state.lotes_detectados = "211-212-213"
-
 if opcion_inicio == "➕ Iniciar desde cero":
     archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
     archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
-
+    
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
         df_base = pd.read_excel(archivo_base, dtype=str)
@@ -107,75 +103,72 @@ if opcion_inicio == "➕ Iniciar desde cero":
             on="DNI",
             how="left"
         )
-
         st.success("✅ Cruce de trabajadores realizado")
 
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
-
     if archivo_prev:
-        df_raw = pd.read_excel(
-            archivo_prev,
-            sheet_name="BONO_REPRODUCTORAS",
-            header=None,
-            dtype=str
-        )
-
+        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
         fila_inicio = None
-        for i, row in df_raw.iterrows():
-            if row.astype(str).str.contains("DNI", na=False).any():
+        for i, row in df_prev_raw.iterrows():
+            if "DNI" in row.values:
                 fila_inicio = i
                 break
-
         if fila_inicio is None:
             st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            df = pd.read_excel(
-                archivo_prev,
-                sheet_name="BONO_REPRODUCTORAS",
-                header=fila_inicio,
-                dtype=str
-            )
+            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
             df.columns = df.columns.str.strip().str.upper()
-
-            df["DNI"] = (
-                df["DNI"]
-                .astype(str)
-                .str.replace("'", "", regex=False)
-                .str.replace(".0", "", regex=False)
-                .str.zfill(8)
-            )
-
-            # detectar lotes desde columnas P_
-            lotes_cols = [c.replace("P_", "") for c in df.columns if c.startswith("P_")]
-            if lotes_cols:
-                st.session_state.lotes_detectados = "-".join(lotes_cols)
-
-            # eliminar columnas calculadas
-            df = df[[c for c in df.columns if not (c.startswith("PAGO_") or c == "TOTAL S/")]]
-
+            if "DNI" in df.columns:
+                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
             st.success("✅ Excel previamente cargado")
 
 # =========================
-# VALIDACIÓN
+# SI NO HAY DATOS, DETENER
 # =========================
 if df is None:
     st.warning("Suba un archivo para continuar")
     st.stop()
 
 # =========================
-# GRUPO / PROCESO / LOTES
 # =========================
+# FLUJO ORIGINAL COMPLETO
+# =========================
+# =========================
+
+# 🏡 Granja
+st.subheader("🏡 Granja")
+if "granjas_base" not in st.session_state:
+    st.session_state.granjas_base = ["Chilco I", "Chilco II", "Chilco III", "Chilco IV"]
+
+if "granjas" not in st.session_state:
+    st.session_state.granjas = st.session_state.granjas_base.copy()
+
+opcion_granja = st.selectbox(
+    "Seleccione la granja",
+    st.session_state.granjas + ["➕ Agregar"]
+)
+
+if opcion_granja == "➕ Agregar":
+    nueva_granja = st.text_input("Ingrese nueva granja")
+    if nueva_granja and st.button("Agregar granja"):
+        st.session_state.granjas.append(nueva_granja)
+        st.success("✅ Granja agregada")
+        st.rerun()
+else:
+    st.session_state.granja_seleccionada = opcion_granja
+    if opcion_granja not in st.session_state.granjas_base:
+        if st.button("🗑️ Eliminar granja"):
+            st.session_state.granjas.remove(opcion_granja)
+            st.success("✅ Granja eliminada")
+            st.rerun()
 
 # Tipo de proceso
 tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
-reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
+reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
 
-# 🔑 AQUÍ ESTÁ EL CAMBIO IMPORTANTE
-lotes_txt = st.text_input(
-    "Lotes (ej: 211-212-213)",
-    st.session_state.lotes_detectados
-)
+# Lotes
+lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
 lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
 # Configuración por lote
@@ -314,5 +307,3 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
-
-
