@@ -119,7 +119,66 @@ if archivo_dni and archivo_base:
     st.success("✅ Cruce de trabajadores realizado")
 
     # =========================
-    # 🏡 GRANJA (MODIFICADO SOLO AQUÍ)
+    # OPCIÓN: CARGAR EXCEL ANTERIOR
+    # =========================
+    modo_trabajo = st.radio(
+        "Seleccione cómo desea trabajar",
+        ["🆕 Empezar desde cero", "📄 Cargar Excel previamente descargado"],
+        horizontal=True
+    )
+
+    if modo_trabajo == "📄 Cargar Excel previamente descargado":
+        archivo_prev = st.file_uploader(
+            "📤 Suba el Excel generado anteriormente",
+            type=["xlsx"]
+        )
+
+        if archivo_prev:
+            df_prev = pd.read_excel(
+                archivo_prev,
+                sheet_name="BONO_REPRODUCTORAS",
+                dtype=str
+            )
+
+            df_prev["DNI"] = limpiar_dni(df_prev["DNI"])
+
+            # Detectar columnas de participación y faltas
+            columnas_datos = [c for c in df_prev.columns if c.startswith("P_") or c.startswith("F_")]
+
+            tabla = df.copy()
+            for col in columnas_datos:
+                if col not in tabla.columns:
+                    tabla[col] = 0
+
+            tabla.set_index("DNI", inplace=True)
+            df_prev.set_index("DNI", inplace=True)
+
+            for col in columnas_datos:
+                tabla.loc[
+                    tabla.index.intersection(df_prev.index),
+                    col
+                ] = df_prev.loc[
+                    tabla.index.intersection(df_prev.index),
+                    col
+                ]
+
+            tabla.reset_index(inplace=True)
+
+            st.session_state.tabla = tabla.copy()
+            st.session_state.df_edit = tabla.copy()
+
+            st.success("✅ Datos recuperados del Excel anterior")
+            st.info("Puede continuar completando información")
+
+    # =========================
+    # SI EMPIEZA DESDE CERO
+    # =========================
+    if modo_trabajo == "🆕 Empezar desde cero" and "tabla" not in st.session_state:
+        st.session_state.tabla = df.copy()
+        st.session_state.df_edit = df.copy()
+
+    # =========================
+    # 🏡 GRANJA
     # =========================
     st.subheader("🏡 Granja")
 
@@ -339,7 +398,7 @@ if archivo_dni and archivo_base:
 
     st.plotly_chart(fig, use_container_width=True)
 
-            # =========================
+    # =========================
     # EXPORTAR (UNA SOLA HOJA)
     # =========================
     output = BytesIO()
