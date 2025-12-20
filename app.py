@@ -108,20 +108,71 @@ if opcion_inicio == "➕ Iniciar desde cero":
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
     if archivo_prev:
+        # --- Leer todo sin encabezado ---
         df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
-        fila_inicio = None
+
+        # --- Extraer tabla de trabajadores (DNI) ---
+        fila_dni = None
         for i, row in df_prev_raw.iterrows():
-            if "DNI" in row.values:
-                fila_inicio = i
+            if row.str.contains("DNI", na=False).any():
+                fila_dni = i
                 break
-        if fila_inicio is None:
+        
+        if fila_dni is None:
             st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
+            # DataFrame principal
+            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_dni)
             df.columns = df.columns.str.strip().str.upper()
             if "DNI" in df.columns:
                 df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
             st.success("✅ Excel previamente cargado")
+
+            # --- Extraer datos de configuración (primeras 10 filas) ---
+            df_encabezado = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, nrows=10)
+            
+            # Granja
+            try:
+                granja_val = df_encabezado.loc[df_encabezado['Campo']=="Granja", 'Valor'].values[0]
+                st.session_state.granja_seleccionada = granja_val
+            except:
+                st.session_state.granja_seleccionada = None
+
+            # Tipo de proceso
+            try:
+                tipo_val = df_encabezado.loc[df_encabezado['Campo']=="Tipo de Proceso", 'Valor'].values[0]
+            except:
+                tipo_val = "PRODUCCIÓN"
+            tipo = tipo_val
+            st.session_state.tipo = tipo
+
+            # Lotes
+            try:
+                lotes_val = df_encabezado.loc[df_encabezado['Campo']=="Lotes", 'Valor'].values[0]
+                lotes = [l.strip() for l in lotes_val.replace(",", "-").split("-") if l.strip()]
+            except:
+                lotes = []
+            st.session_state.lotes = lotes
+
+            # --- Configuración por lote ---
+            # Encontrar fila donde empieza la tabla de lotes (buscar "Lote")
+            fila_lotes = None
+            for i, row in df_prev_raw.iterrows():
+                if row.str.contains("Lote", na=False).any():
+                    fila_lotes = i
+                    break
+
+            df_lotes = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_lotes)
+            df_lotes.columns = df_lotes.columns.str.strip().str.upper()
+
+            config_lotes = {}
+            for l in lotes:
+                try:
+                    fila_l = df_lotes[df_lotes["LOTE"]==l].iloc[0]
+                    config_lotes[l] = {"GENETICA": fila_l["GENÉTICA"].upper(), "MONTO": float(fila_l["MONTO S/"])}
+                except:
+                    config_lotes[l] = {"GENETICA":"ROSS","MONTO":1000.0}
+            st.session_state.config_lotes = config_lotes
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -307,3 +358,4 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
