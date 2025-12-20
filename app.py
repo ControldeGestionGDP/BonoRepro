@@ -127,8 +127,8 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                 df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
 
             # --- Cargar configuración ---
-            df_encabezado = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, nrows=10)
             try:
+                df_encabezado = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, nrows=10)
                 st.session_state.granja_seleccionada = df_encabezado.loc[df_encabezado['Campo'].str.strip().str.upper()=="GRANJA", 'Valor'].values[0]
             except:
                 st.session_state.granja_seleccionada = None
@@ -348,6 +348,3 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
-
-
-
