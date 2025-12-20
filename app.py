@@ -69,15 +69,26 @@ def factor_faltas(f):
     return DESCUENTO_FALTAS.get(f, 0.50)
 
 # =========================
-# CARGA DE ARCHIVOS SEGÚN OPCIÓN
+# CARGA DE ARCHIVOS
 # =========================
 df = None
 df_base = None
+lotes_detectados = "211-212-213"  # valor por defecto
+
+def limpiar_dni_col(df):
+    df["DNI"] = (
+        df["DNI"].astype(str)
+        .str.replace("'", "", regex=False)
+        .str.replace(".0", "", regex=False)
+        .str.strip()
+        .str.zfill(8)
+    )
+    return df
 
 if opcion_inicio == "➕ Iniciar desde cero":
     archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
     archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
-    
+
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
         df_base = pd.read_excel(archivo_base, dtype=str)
@@ -85,66 +96,70 @@ if opcion_inicio == "➕ Iniciar desde cero":
         df_dni.columns = df_dni.columns.str.strip().str.upper()
         df_base.columns = df_base.columns.str.strip().str.upper()
 
-        def limpiar_dni(s):
-            return (
-                s.astype(str)
-                .str.replace("'", "", regex=False)
-                .str.replace(".0", "", regex=False)
-                .str.strip()
-                .str.zfill(8)
-            )
-
-        df_dni["DNI"] = limpiar_dni(df_dni["DNI"])
-        df_base["DNI"] = limpiar_dni(df_base["DNI"])
+        df_dni = limpiar_dni_col(df_dni)
+        df_base = limpiar_dni_col(df_base)
         df_base = df_base.drop_duplicates("DNI")
 
         df = df_dni.merge(
-            df_base[["DNI","NOMBRE COMPLETO","CARGO"]],
+            df_base[["DNI", "NOMBRE COMPLETO", "CARGO"]],
             on="DNI",
             how="left"
         )
+
         st.success("✅ Cruce de trabajadores realizado")
 
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
     if archivo_prev:
-        # Leer todo sin encabezado
-        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
+        df_prev_raw = pd.read_excel(
+            archivo_prev,
+            sheet_name="BONO_REPRODUCTORAS",
+            header=None,
+            dtype=str
+        )
 
-        # Buscar la fila donde empieza la tabla de trabajadores
         fila_inicio = None
         for i, row in df_prev_raw.iterrows():
-            if row.str.contains("DNI", na=False).any():
+            if row.astype(str).str.contains("DNI", na=False).any():
                 fila_inicio = i
                 break
 
         if fila_inicio is None:
             st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            # Leer desde esa fila hasta el final, manteniendo todas las columnas
-            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
-            df.columns = df.columns.str.strip().str.upper()
+            df_cargado = pd.read_excel(
+                archivo_prev,
+                sheet_name="BONO_REPRODUCTORAS",
+                header=fila_inicio,
+                dtype=str
+            )
+            df_cargado.columns = df_cargado.columns.str.strip().str.upper()
+            df_cargado = limpiar_dni_col(df_cargado)
 
-            # Limpiar la columna DNI
-            if "DNI" in df.columns:
-                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
-            
-            st.success("✅ Excel previamente cargado")
+            # Quitar columnas calculadas
+            columnas_validas = [
+                c for c in df_cargado.columns
+                if not (c.startswith("PAGO_") or c == "TOTAL S/")
+            ]
+            df = df_cargado[columnas_validas].copy()
+
+            # Detectar lotes
+            lotes_list = sorted([c.replace("P_", "") for c in df.columns if c.startswith("P_")])
+            if lotes_list:
+                lotes_detectados = "-".join(lotes_list)
+
+            st.success(f"✅ Excel cargado. Lotes detectados: {lotes_detectados}")
 
 # =========================
-# SI NO HAY DATOS, DETENER
+# VALIDACIÓN
 # =========================
 if df is None:
     st.warning("Suba un archivo para continuar")
     st.stop()
 
 # =========================
+# GRANJA
 # =========================
-# FLUJO ORIGINAL COMPLETO
-# =========================
-# =========================
-
-# 🏡 Granja
 st.subheader("🏡 Granja")
 if "granjas_base" not in st.session_state:
     st.session_state.granjas_base = ["Chilco I", "Chilco II", "Chilco III", "Chilco IV"]
@@ -171,15 +186,18 @@ else:
             st.success("✅ Granja eliminada")
             st.rerun()
 
-# Tipo de proceso
-tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
-reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
+# =========================
+# CONFIGURACIÓN DE PROCESO Y LOTES
+# =========================
+tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN", "LEVANTE"], horizontal=True)
+reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
 
-# Lotes
-lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
+lotes_txt = st.text_input("Lotes (ej: 211-212-213)", lotes_detectados)
 lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
-# Configuración por lote
+# =========================
+# CONFIGURACIÓN POR LOTE
+# =========================
 st.subheader("🧬 Configuración por lote")
 config_lotes = {}
 cols = st.columns(len(lotes))
@@ -189,129 +207,86 @@ for i, lote in enumerate(lotes):
         monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0, step=50.0)
         config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
 
-# SESSION STATE tabla
-if "tabla" not in st.session_state:
+# =========================
+# SESSION STATE TABLA
+# =========================
+if "tabla" not in st.session_state or opcion_inicio == "📂 Cargar Excel previamente generado":
     st.session_state.tabla = df.copy()
-    for lote in lotes:
-        st.session_state.tabla[f"P_{lote}"] = 0.0
-        st.session_state.tabla[f"F_{lote}"] = 0
-else:
-    for lote in lotes:
-        if f"P_{lote}" not in st.session_state.tabla.columns:
-            st.session_state.tabla[f"P_{lote}"] = 0.0
-        if f"F_{lote}" not in st.session_state.tabla.columns:
-            st.session_state.tabla[f"F_{lote}"] = 0
 
-# Ordenar columnas
-base_cols = ["DNI","NOMBRE COMPLETO","CARGO"]
+for lote in lotes:
+    if f"P_{lote}" not in st.session_state.tabla.columns:
+        st.session_state.tabla[f"P_{lote}"] = 0.0
+    if f"F_{lote}" not in st.session_state.tabla.columns:
+        st.session_state.tabla[f"F_{lote}"] = 0
+
+base_cols = ["DNI", "NOMBRE COMPLETO", "CARGO"]
 pct_cols = [f"P_{l}" for l in lotes]
 faltas_cols = [f"F_{l}" for l in lotes]
 st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols]
 
-# Sincronizar df_edit
-if "df_edit" not in st.session_state:
-    st.session_state.df_edit = st.session_state.tabla.copy()
-else:
-    for col in st.session_state.tabla.columns:
-        if col not in st.session_state.df_edit.columns:
-            st.session_state.df_edit[col] = st.session_state.tabla[col]
-    st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
-
-# Agregar trabajador
-st.subheader("➕ Agregar trabajador")
-dni_new = st.text_input("DNI", key="dni_preview", placeholder="Ingrese DNI y luego haga click en Agregar")
-dni_limpio = dni_new.strip().zfill(8) if dni_new else ""
-if dni_limpio:
-    if dni_limpio in st.session_state.tabla["DNI"].values:
-        st.warning("⚠️ El trabajador ya existe en la tabla")
-    else:
-        fila_prev = df_base[df_base["DNI"]==dni_limpio]
-        if not fila_prev.empty:
-            st.markdown(f"<span style='color:#1f77b4; font-weight:bold;'>👤 {fila_prev.iloc[0]['NOMBRE COMPLETO']}</span>", unsafe_allow_html=True)
-        else:
-            st.error("❌ DNI no encontrado en la base de trabajadores")
-
-if st.button("Agregar trabajador"):
-    if not dni_limpio:
-        st.warning("⚠️ Ingrese un DNI")
-    elif dni_limpio in st.session_state.tabla["DNI"].values:
-        st.warning("⚠️ El trabajador ya existe en la tabla")
-    else:
-        fila = df_base[df_base["DNI"]==dni_limpio]
-        if fila.empty:
-            st.error("❌ DNI no encontrado en la base de trabajadores")
-        else:
-            fila = fila.iloc[0]
-            nuevo = {"DNI": dni_limpio, "NOMBRE COMPLETO": fila["NOMBRE COMPLETO"], "CARGO": fila["CARGO"]}
-            for lote in lotes:
-                nuevo[f"P_{lote}"] = 0.0
-                nuevo[f"F_{lote}"] = 0
-            st.session_state.tabla = pd.concat([st.session_state.tabla, pd.DataFrame([nuevo])], ignore_index=True)
-            st.session_state.df_edit = st.session_state.tabla.copy()
-            st.success("✅ Trabajador agregado")
-            st.rerun()
-
-# Eliminar trabajador
-st.subheader("➖ Eliminar trabajador")
-eliminar_dni = st.text_input("DNI a eliminar").strip().zfill(8)
-if st.button("Eliminar trabajador"):
-    st.session_state.tabla = st.session_state.tabla[st.session_state.tabla["DNI"] != eliminar_dni]
-    st.session_state.df_edit = st.session_state.tabla.copy()
-    st.success("✅ Trabajador eliminado")
-
-# Editar tabla
+# =========================
+# EDICIÓN
+# =========================
 st.subheader("✍️ Registro por trabajador y lote")
-with st.form("form_edicion"):
-    df_edit = st.data_editor(st.session_state.df_edit, use_container_width=True)
-    if st.form_submit_button("💾 Actualizar tabla"):
-        st.session_state.tabla = df_edit.copy()
-        st.session_state.df_edit = df_edit.copy()
-        st.success("✅ Tabla actualizada")
+df_edit = st.data_editor(st.session_state.tabla, use_container_width=True)
+st.session_state.tabla = df_edit.copy()
 
-# Cálculo final
+# =========================
+# CÁLCULO FINAL
+# =========================
 df_final = st.session_state.tabla.copy()
 pagos = []
+
 for lote in lotes:
     col = f"PAGO_{lote}"
-    df_final[col] = df_final.apply(lambda r: round(
-        reglas.get(str(r["CARGO"]).upper(),0) * config_lotes[lote]["MONTO"] * (float(r[f"P_{lote}"])/100) * factor_faltas(r[f"F_{lote}"]),
-        2
-    ), axis=1)
+    df_final[col] = df_final.apply(
+        lambda r: round(
+            reglas.get(str(r["CARGO"]).upper(), 0)
+            * config_lotes[lote]["MONTO"]
+            * (float(r[f"P_{lote}"]) / 100)
+            * factor_faltas(r[f"F_{lote}"]),
+            2
+        ),
+        axis=1
+    )
     pagos.append(col)
 
 df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
 
-# Resultado final
 st.subheader("💰 Resultado final")
 st.dataframe(df_final, use_container_width=True)
 
-# Gráfico
-st.subheader("📊 Distribución de bonos por trabajador")
-fig = px.bar(df_final, x="NOMBRE COMPLETO", y="TOTAL S/", text="TOTAL S/", title="Bono total por trabajador")
-fig.update_traces(texttemplate="S/ %{text:,.2f}", textposition="outside", cliponaxis=False)
-fig.update_layout(xaxis_tickangle=-45, height=550, margin=dict(t=100), yaxis=dict(rangemode="tozero"))
-st.plotly_chart(fig, use_container_width=True)
-
-# Exportar
+# =========================
+# EXPORTAR
+# =========================
 output = BytesIO()
 with pd.ExcelWriter(output, engine="openpyxl") as writer:
-    sheet_name = "BONO_REPRODUCTORAS"
-    fila_actual = 0
+    sheet = "BONO_REPRODUCTORAS"
+    fila = 0
 
-    # Encabezado
     encabezado = pd.DataFrame({
-        "Campo":["Granja","Tipo de Proceso","Lotes","Fecha de Generación"],
-        "Valor":[st.session_state.get("granja_seleccionada",""), tipo, ", ".join(lotes), pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")]
+        "Campo": ["Granja", "Tipo de Proceso", "Lotes", "Fecha de Generación"],
+        "Valor": [
+            st.session_state.get("granja_seleccionada", ""),
+            tipo,
+            ", ".join(lotes),
+            pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+        ]
     })
-    encabezado.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
-    fila_actual += len(encabezado)+2
+    encabezado.to_excel(writer, sheet_name=sheet, index=False, startrow=fila)
+    fila += len(encabezado) + 2
 
-    # Configuración de lotes
-    df_lotes = pd.DataFrame([{"Lote":l,"Genética":config_lotes[l]["GENETICA"],"Monto S/":config_lotes[l]["MONTO"]} for l in lotes])
-    df_lotes.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
-    fila_actual += len(df_lotes)+3
+    df_lotes = pd.DataFrame([
+        {"Lote": l, "Genética": config_lotes[l]["GENETICA"], "Monto S/": config_lotes[l]["MONTO"]}
+        for l in lotes
+    ])
+    df_lotes.to_excel(writer, sheet_name=sheet, index=False, startrow=fila)
+    fila += len(df_lotes) + 3
 
-    # Detalle trabajadores
-    df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
+    df_final.to_excel(writer, sheet_name=sheet, index=False, startrow=fila)
 
-st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+st.download_button(
+    "📥 Descargar archivo final",
+    data=output.getvalue(),
+    file_name="bono_reproductoras_final.xlsx"
+)
