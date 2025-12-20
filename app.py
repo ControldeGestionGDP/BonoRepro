@@ -119,7 +119,7 @@ if archivo_dni and archivo_base:
     st.success("✅ Cruce de trabajadores realizado")
 
     # =========================
-    # 🏡 GRANJA (SOLO AGREGADO)
+    # 🏡 GRANJA
     # =========================
     st.subheader("🏡 Granja")
 
@@ -205,23 +205,32 @@ if archivo_dni and archivo_base:
         dni_new = st.text_input("DNI")
         if st.form_submit_button("Agregar trabajador"):
             dni_new = dni_new.strip().zfill(8)
+
             if dni_new not in st.session_state.tabla["DNI"].values:
-                fila = df_base[df_base["DNI"] == dni_new].iloc[0]
-                nuevo = {
-                    "DNI": dni_new,
-                    "NOMBRE COMPLETO": fila["NOMBRE COMPLETO"],
-                    "CARGO": fila["CARGO"]
-                }
-                for lote in lotes:
-                    nuevo[f"P_{lote}"] = 0.0
-                    nuevo[f"F_{lote}"] = 0
-                st.session_state.tabla = pd.concat(
-                    [st.session_state.tabla, pd.DataFrame([nuevo])],
-                    ignore_index=True
-                )
-                st.session_state.df_edit = st.session_state.tabla.copy()
-                st.success("✅ Trabajador agregado")
-                st.rerun()
+                fila = df_base[df_base["DNI"] == dni_new]
+
+                if fila.empty:
+                    st.error("❌ DNI no existe en la base de trabajadores")
+                else:
+                    fila = fila.iloc[0]
+                    nuevo = {
+                        "DNI": dni_new,
+                        "NOMBRE COMPLETO": fila["NOMBRE COMPLETO"],
+                        "CARGO": fila["CARGO"]
+                    }
+                    for lote in lotes:
+                        nuevo[f"P_{lote}"] = 0.0
+                        nuevo[f"F_{lote}"] = 0
+
+                    st.session_state.tabla = pd.concat(
+                        [st.session_state.tabla, pd.DataFrame([nuevo])],
+                        ignore_index=True
+                    )
+                    st.session_state.df_edit = st.session_state.tabla.copy()
+                    st.success("✅ Trabajador agregado")
+                    st.rerun()
+            else:
+                st.warning("⚠️ El trabajador ya existe en la tabla")
 
     # =========================
     # ELIMINAR TRABAJADOR
@@ -240,7 +249,11 @@ if archivo_dni and archivo_base:
     # =========================
     st.subheader("✍️ Registro por trabajador y lote")
     with st.form("form_edicion"):
-        df_edit = st.data_editor(st.session_state.df_edit, use_container_width=True)
+        df_edit = st.data_editor(
+            st.session_state.df_edit,
+            use_container_width=True,
+            num_rows="fixed"
+        )
         if st.form_submit_button("💾 Actualizar tabla"):
             st.session_state.tabla = df_edit.copy()
             st.session_state.df_edit = df_edit.copy()
@@ -275,7 +288,7 @@ if archivo_dni and archivo_base:
     st.dataframe(df_final, use_container_width=True)
 
     # =========================
-    # GRÁFICO PLOTLY
+    # GRÁFICO
     # =========================
     st.subheader("📊 Distribución de bonos por trabajador")
 
