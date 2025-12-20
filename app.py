@@ -108,60 +108,19 @@ if opcion_inicio == "➕ Iniciar desde cero":
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
     if archivo_prev:
-        # Leer todo como texto para buscar la fila con "DNI"
         df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
         fila_inicio = None
         for i, row in df_prev_raw.iterrows():
-            row_vals = [str(v).strip().upper() if v is not None else "" for v in row.values]
-            if "DNI" in row_vals:
+            if "DNI" in row.values:
                 fila_inicio = i
                 break
-
         if fila_inicio is None:
             st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            # Cargar tabla principal
             df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
             df.columns = df.columns.str.strip().str.upper()
             if "DNI" in df.columns:
                 df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
-
-            # --- Cargar configuración ---
-            try:
-                df_encabezado = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, nrows=10)
-                st.session_state.granja_seleccionada = df_encabezado.loc[df_encabezado['Campo'].str.strip().str.upper()=="GRANJA", 'Valor'].values[0]
-            except:
-                st.session_state.granja_seleccionada = None
-
-            try:
-                tipo = df_encabezado.loc[df_encabezado['Campo'].str.strip().str.upper()=="TIPO DE PROCESO", 'Valor'].values[0]
-            except:
-                tipo = "PRODUCCIÓN"
-            st.session_state.tipo = tipo
-
-            try:
-                lotes_val = df_encabezado.loc[df_encabezado['Campo'].str.strip().str.upper()=="LOTES", 'Valor'].values[0]
-                lotes = [l.strip() for l in lotes_val.replace("-",",").split(",") if l.strip()]
-            except:
-                lotes = []
-            st.session_state.lotes = lotes
-
-            # Configuración por lote
-            config_lotes = {}
-            if lotes:
-                try:
-                    df_lotes = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, skiprows=3, nrows=len(lotes))
-                    for l in lotes:
-                        try:
-                            fila_l = df_lotes[df_lotes["Lote"].str.strip()==l].iloc[0]
-                            config_lotes[l] = {"GENETICA": fila_l["Genética"].upper(), "MONTO": float(fila_l["Monto S/"])}
-                        except:
-                            config_lotes[l] = {"GENETICA":"ROSS","MONTO":1000.0}
-                except:
-                    for l in lotes:
-                        config_lotes[l] = {"GENETICA":"ROSS","MONTO":1000.0}
-            st.session_state.config_lotes = config_lotes
-
             st.success("✅ Excel previamente cargado")
 
 # =========================
