@@ -339,12 +339,72 @@ if archivo_dni and archivo_base:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # =========================
-    # EXPORTAR
+        # =========================
+    # EXPORTAR (ESTRUCTURADO COMPLETO)
     # =========================
     output = BytesIO()
+
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_final.to_excel(writer, index=False)
+
+        # -------------------------
+        # HOJA 1: RESUMEN GENERAL
+        # -------------------------
+        resumen = pd.DataFrame({
+            "Campo": [
+                "Granja",
+                "Tipo de Proceso",
+                "Lotes",
+                "Fecha de Generación"
+            ],
+            "Valor": [
+                st.session_state.get("granja_seleccionada", ""),
+                tipo,
+                ", ".join(lotes),
+                pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+            ]
+        })
+
+        resumen.to_excel(
+            writer,
+            sheet_name="Resumen General",
+            index=False
+        )
+
+        # -------------------------
+        # HOJA 2: CONFIGURACIÓN LOTES
+        # -------------------------
+        df_lotes = pd.DataFrame([
+            {
+                "Lote": l,
+                "Genética": config_lotes[l]["GENETICA"],
+                "Monto S/": config_lotes[l]["MONTO"]
+            }
+            for l in lotes
+        ])
+
+        df_lotes.to_excel(
+            writer,
+            sheet_name="Configuración Lotes",
+            index=False
+        )
+
+        # -------------------------
+        # HOJA 3: REGISTRO TRABAJADORES
+        # -------------------------
+        st.session_state.tabla.to_excel(
+            writer,
+            sheet_name="Registro Trabajadores",
+            index=False
+        )
+
+        # -------------------------
+        # HOJA 4: CÁLCULO FINAL BONOS
+        # -------------------------
+        df_final.to_excel(
+            writer,
+            sheet_name="Cálculo Bonos",
+            index=False
+        )
 
     st.download_button(
         "📥 Descargar archivo final",
