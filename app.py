@@ -124,9 +124,7 @@ if archivo_dni and archivo_base:
     st.subheader("🏡 Granja")
 
     if "granjas" not in st.session_state:
-        st.session_state.granjas = [
-            "Chilco I", "Chilco II", "Chilco III", "Chilco IV"
-        ]
+        st.session_state.granjas = ["Chilco I","Chilco II","Chilco III","Chilco IV"]
 
     opcion_granja = st.selectbox(
         "Seleccione la granja",
@@ -178,43 +176,46 @@ if archivo_dni and archivo_base:
             if f"F_{lote}" not in st.session_state.tabla.columns:
                 st.session_state.tabla[f"F_{lote}"] = 0
 
-    # =========================
-    # ORDENAR COLUMNAS
-    # =========================
     base_cols = ["DNI","NOMBRE COMPLETO","CARGO"]
     pct_cols = [f"P_{l}" for l in lotes]
     faltas_cols = [f"F_{l}" for l in lotes]
     st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols]
 
-    # =========================
-    # SINCRONIZAR df_edit
-    # =========================
     if "df_edit" not in st.session_state:
         st.session_state.df_edit = st.session_state.tabla.copy()
     else:
-        for col in st.session_state.tabla.columns:
-            if col not in st.session_state.df_edit.columns:
-                st.session_state.df_edit[col] = st.session_state.tabla[col]
         st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
 
     # =========================
-    # AGREGAR TRABAJADOR
+    # ➕ AGREGAR TRABAJADOR (CON PREVISUALIZACIÓN)
     # =========================
     st.subheader("➕ Agregar trabajador")
     with st.form("agregar_trabajador", clear_on_submit=True):
         dni_new = st.text_input("DNI")
+
+        if dni_new:
+            dni_clean = dni_new.strip().zfill(8)
+            fila_preview = df_base[df_base["DNI"] == dni_clean]
+
+            if not fila_preview.empty:
+                st.markdown(
+                    f"<span style='color:#1f77b4; font-weight:600;'>👤 {fila_preview.iloc[0]['NOMBRE COMPLETO']}</span>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown("<span style='color:red;'>❌ DNI no existe</span>", unsafe_allow_html=True)
+
         if st.form_submit_button("Agregar trabajador"):
-            dni_new = dni_new.strip().zfill(8)
+            dni_clean = dni_new.strip().zfill(8)
 
-            if dni_new not in st.session_state.tabla["DNI"].values:
-                fila = df_base[df_base["DNI"] == dni_new]
-
-                if fila.empty:
-                    st.error("❌ DNI no existe en la base de trabajadores")
-                else:
+            if dni_clean in st.session_state.tabla["DNI"].values:
+                st.warning("⚠️ El trabajador ya existe")
+            else:
+                fila = df_base[df_base["DNI"] == dni_clean]
+                if not fila.empty:
                     fila = fila.iloc[0]
                     nuevo = {
-                        "DNI": dni_new,
+                        "DNI": dni_clean,
                         "NOMBRE COMPLETO": fila["NOMBRE COMPLETO"],
                         "CARGO": fila["CARGO"]
                     }
@@ -229,31 +230,13 @@ if archivo_dni and archivo_base:
                     st.session_state.df_edit = st.session_state.tabla.copy()
                     st.success("✅ Trabajador agregado")
                     st.rerun()
-            else:
-                st.warning("⚠️ El trabajador ya existe en la tabla")
 
     # =========================
-    # ELIMINAR TRABAJADOR
-    # =========================
-    st.subheader("➖ Eliminar trabajador")
-    eliminar_dni = st.text_input("DNI a eliminar").strip().zfill(8)
-    if st.button("Eliminar trabajador"):
-        st.session_state.tabla = st.session_state.tabla[
-            st.session_state.tabla["DNI"] != eliminar_dni
-        ]
-        st.session_state.df_edit = st.session_state.tabla.copy()
-        st.success("✅ Trabajador eliminado")
-
-    # =========================
-    # EDITAR TABLA
+    # REGISTRO
     # =========================
     st.subheader("✍️ Registro por trabajador y lote")
     with st.form("form_edicion"):
-        df_edit = st.data_editor(
-            st.session_state.df_edit,
-            use_container_width=True,
-            num_rows="fixed"
-        )
+        df_edit = st.data_editor(st.session_state.df_edit, use_container_width=True)
         if st.form_submit_button("💾 Actualizar tabla"):
             st.session_state.tabla = df_edit.copy()
             st.session_state.df_edit = df_edit.copy()
@@ -281,16 +264,8 @@ if archivo_dni and archivo_base:
 
     df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
 
-    # =========================
-    # RESULTADO FINAL
-    # =========================
     st.subheader("💰 Resultado final")
     st.dataframe(df_final, use_container_width=True)
-
-    # =========================
-    # GRÁFICO
-    # =========================
-    st.subheader("📊 Distribución de bonos por trabajador")
 
     fig = px.bar(
         df_final,
@@ -300,24 +275,11 @@ if archivo_dni and archivo_base:
         title="Bono total por trabajador"
     )
 
-    fig.update_traces(
-        texttemplate="S/ %{text:,.2f}",
-        textposition="outside",
-        cliponaxis=False
-    )
-
-    fig.update_layout(
-        xaxis_tickangle=-45,
-        height=550,
-        margin=dict(t=100),
-        yaxis=dict(rangemode="tozero")
-    )
+    fig.update_traces(texttemplate="S/ %{text:,.2f}", textposition="outside", cliponaxis=False)
+    fig.update_layout(xaxis_tickangle=-45, height=550, yaxis=dict(rangemode="tozero"))
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # =========================
-    # EXPORTAR
-    # =========================
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df_final.to_excel(writer, index=False)
