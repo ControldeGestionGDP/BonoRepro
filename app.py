@@ -34,6 +34,25 @@ if not st.session_state.ingresar:
     st.stop()
 
 # =========================
+# OPCIÓN: INICIAR DE CERO O CARGAR ARCHIVO
+# =========================
+if "modo" not in st.session_state:
+    st.session_state.modo = None
+
+if st.session_state.modo is None:
+    st.subheader("Seleccione cómo desea iniciar")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🆕 Iniciar de cero"):
+            st.session_state.modo = "cero"
+            st.rerun()
+    with col2:
+        if st.button("📂 Cargar archivo descargado"):
+            st.session_state.modo = "archivo"
+            st.rerun()
+    st.stop()
+
+# =========================
 # TABLAS DE % POR CARGO
 # =========================
 REGLAS_PRODUCCION = {
@@ -85,12 +104,19 @@ st.markdown("""
 """)
 
 # =========================
-# CARGA DE ARCHIVOS
+# CARGA DE ARCHIVOS SOLO SI SE ELIGE MODO "ARCHIVO"
 # =========================
-archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
-archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
+if st.session_state.modo == "archivo":
+    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
+    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
+else:
+    archivo_dni = None
+    archivo_base = None
 
-if archivo_dni and archivo_base:
+# =========================
+# PROCESO DE CARGA Y CRUCE
+# =========================
+if st.session_state.modo == "archivo" and archivo_dni and archivo_base:
     df_dni = pd.read_excel(archivo_dni, dtype=str)
     df_base = pd.read_excel(archivo_base, dtype=str)
 
@@ -118,111 +144,115 @@ if archivo_dni and archivo_base:
 
     st.success("✅ Cruce de trabajadores realizado")
 
-    # =========================
-    # 🏡 GRANJA (MODIFICADO SOLO AQUÍ)
-    # =========================
-    st.subheader("🏡 Granja")
+# =========================
+# 🏡 GRANJA
+# =========================
+st.subheader("🏡 Granja")
 
-    if "granjas_base" not in st.session_state:
-        st.session_state.granjas_base = [
-            "Chilco I", "Chilco II", "Chilco III", "Chilco IV"
-        ]
+if "granjas_base" not in st.session_state:
+    st.session_state.granjas_base = [
+        "Chilco I", "Chilco II", "Chilco III", "Chilco IV"
+    ]
 
-    if "granjas" not in st.session_state:
-        st.session_state.granjas = st.session_state.granjas_base.copy()
+if "granjas" not in st.session_state:
+    st.session_state.granjas = st.session_state.granjas_base.copy()
 
-    opcion_granja = st.selectbox(
-        "Seleccione la granja",
-        st.session_state.granjas + ["➕ Agregar"]
-    )
+opcion_granja = st.selectbox(
+    "Seleccione la granja",
+    st.session_state.granjas + ["➕ Agregar"]
+)
 
-    if opcion_granja == "➕ Agregar":
-        nueva_granja = st.text_input("Ingrese nueva granja")
-        if nueva_granja and st.button("Agregar granja"):
-            st.session_state.granjas.append(nueva_granja)
-            st.success("✅ Granja agregada")
+if opcion_granja == "➕ Agregar":
+    nueva_granja = st.text_input("Ingrese nueva granja")
+    if nueva_granja and st.button("Agregar granja"):
+        st.session_state.granjas.append(nueva_granja)
+        st.success("✅ Granja agregada")
+        st.rerun()
+else:
+    st.session_state.granja_seleccionada = opcion_granja
+
+    if opcion_granja not in st.session_state.granjas_base:
+        if st.button("🗑️ Eliminar granja"):
+            st.session_state.granjas.remove(opcion_granja)
+            st.success("✅ Granja eliminada")
             st.rerun()
+
+# =========================
+# TIPO DE PROCESO
+# =========================
+tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
+reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
+
+# =========================
+# LOTES
+# =========================
+lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
+lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
+
+st.subheader("🧬 Configuración por lote")
+config_lotes = {}
+cols = st.columns(len(lotes))
+for i, lote in enumerate(lotes):
+    with cols[i]:
+        genetica = st.text_input(f"Genética {lote}", "ROSS")
+        monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0, step=50.0)
+        config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
+
+# =========================
+# SESSION STATE TABLA
+# =========================
+if "tabla" not in st.session_state:
+    if st.session_state.modo == "cero":
+        st.session_state.tabla = pd.DataFrame(columns=["DNI","NOMBRE COMPLETO","CARGO"])
     else:
-        st.session_state.granja_seleccionada = opcion_granja
-
-        if opcion_granja not in st.session_state.granjas_base:
-            if st.button("🗑️ Eliminar granja"):
-                st.session_state.granjas.remove(opcion_granja)
-                st.success("✅ Granja eliminada")
-                st.rerun()
-
-    # =========================
-    # TIPO DE PROCESO
-    # =========================
-    tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
-    reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
-
-    # =========================
-    # LOTES
-    # =========================
-    lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
-    lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
-
-    st.subheader("🧬 Configuración por lote")
-    config_lotes = {}
-    cols = st.columns(len(lotes))
-    for i, lote in enumerate(lotes):
-        with cols[i]:
-            genetica = st.text_input(f"Genética {lote}", "ROSS")
-            monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0, step=50.0)
-            config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
-
-    # =========================
-    # SESSION STATE TABLA
-    # =========================
-    if "tabla" not in st.session_state:
         st.session_state.tabla = df.copy()
-        for lote in lotes:
+    for lote in lotes:
+        st.session_state.tabla[f"P_{lote}"] = 0.0
+        st.session_state.tabla[f"F_{lote}"] = 0
+else:
+    for lote in lotes:
+        if f"P_{lote}" not in st.session_state.tabla.columns:
             st.session_state.tabla[f"P_{lote}"] = 0.0
+        if f"F_{lote}" not in st.session_state.tabla.columns:
             st.session_state.tabla[f"F_{lote}"] = 0
+
+# =========================
+# ORDENAR COLUMNAS
+# =========================
+base_cols = ["DNI","NOMBRE COMPLETO","CARGO"]
+pct_cols = [f"P_{l}" for l in lotes]
+faltas_cols = [f"F_{l}" for l in lotes]
+st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols]
+
+# =========================
+# SINCRONIZAR df_edit
+# =========================
+if "df_edit" not in st.session_state:
+    st.session_state.df_edit = st.session_state.tabla.copy()
+else:
+    for col in st.session_state.tabla.columns:
+        if col not in st.session_state.df_edit.columns:
+            st.session_state.df_edit[col] = st.session_state.tabla[col]
+    st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
+
+# =========================
+# AGREGAR TRABAJADOR
+# =========================
+st.subheader("➕ Agregar trabajador")
+
+dni_new = st.text_input(
+    "DNI",
+    key="dni_preview",
+    placeholder="Ingrese DNI y luego haga click en Agregar"
+)
+
+dni_limpio = dni_new.strip().zfill(8) if dni_new else ""
+
+if dni_limpio:
+    if dni_limpio in st.session_state.tabla["DNI"].values:
+        st.warning("⚠️ El trabajador ya existe en la tabla")
     else:
-        for lote in lotes:
-            if f"P_{lote}" not in st.session_state.tabla.columns:
-                st.session_state.tabla[f"P_{lote}"] = 0.0
-            if f"F_{lote}" not in st.session_state.tabla.columns:
-                st.session_state.tabla[f"F_{lote}"] = 0
-
-    # =========================
-    # ORDENAR COLUMNAS
-    # =========================
-    base_cols = ["DNI","NOMBRE COMPLETO","CARGO"]
-    pct_cols = [f"P_{l}" for l in lotes]
-    faltas_cols = [f"F_{l}" for l in lotes]
-    st.session_state.tabla = st.session_state.tabla[base_cols + pct_cols + faltas_cols]
-
-    # =========================
-    # SINCRONIZAR df_edit
-    # =========================
-    if "df_edit" not in st.session_state:
-        st.session_state.df_edit = st.session_state.tabla.copy()
-    else:
-        for col in st.session_state.tabla.columns:
-            if col not in st.session_state.df_edit.columns:
-                st.session_state.df_edit[col] = st.session_state.tabla[col]
-        st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
-
-    # =========================
-    # AGREGAR TRABAJADOR
-    # =========================
-    st.subheader("➕ Agregar trabajador")
-
-    dni_new = st.text_input(
-        "DNI",
-        key="dni_preview",
-        placeholder="Ingrese DNI y luego haga click en Agregar"
-    )
-
-    dni_limpio = dni_new.strip().zfill(8) if dni_new else ""
-
-    if dni_limpio:
-        if dni_limpio in st.session_state.tabla["DNI"].values:
-            st.warning("⚠️ El trabajador ya existe en la tabla")
-        else:
+        if st.session_state.modo == "archivo":
             fila_prev = df_base[df_base["DNI"] == dni_limpio]
             if not fila_prev.empty:
                 st.markdown(
@@ -232,12 +262,13 @@ if archivo_dni and archivo_base:
             else:
                 st.error("❌ DNI no encontrado en la base de trabajadores")
 
-    if st.button("Agregar trabajador"):
-        if not dni_limpio:
-            st.warning("⚠️ Ingrese un DNI")
-        elif dni_limpio in st.session_state.tabla["DNI"].values:
-            st.warning("⚠️ El trabajador ya existe en la tabla")
-        else:
+if st.button("Agregar trabajador"):
+    if not dni_limpio:
+        st.warning("⚠️ Ingrese un DNI")
+    elif dni_limpio in st.session_state.tabla["DNI"].values:
+        st.warning("⚠️ El trabajador ya existe en la tabla")
+    else:
+        if st.session_state.modo == "archivo":
             fila = df_base[df_base["DNI"] == dni_limpio]
             if fila.empty:
                 st.error("❌ DNI no encontrado en la base de trabajadores")
@@ -248,167 +279,170 @@ if archivo_dni and archivo_base:
                     "NOMBRE COMPLETO": fila["NOMBRE COMPLETO"],
                     "CARGO": fila["CARGO"]
                 }
-                for lote in lotes:
-                    nuevo[f"P_{lote}"] = 0.0
-                    nuevo[f"F_{lote}"] = 0
+        else:
+            nuevo = {"DNI": dni_limpio,"NOMBRE COMPLETO":"","CARGO":""}
 
-                st.session_state.tabla = pd.concat(
-                    [st.session_state.tabla, pd.DataFrame([nuevo])],
-                    ignore_index=True
-                )
-                st.session_state.df_edit = st.session_state.tabla.copy()
-                st.success("✅ Trabajador agregado")
-                st.rerun()
+        for lote in lotes:
+            nuevo[f"P_{lote}"] = 0.0
+            nuevo[f"F_{lote}"] = 0
 
-    # =========================
-    # ELIMINAR TRABAJADOR
-    # =========================
-    st.subheader("➖ Eliminar trabajador")
-    eliminar_dni = st.text_input("DNI a eliminar").strip().zfill(8)
-    if st.button("Eliminar trabajador"):
-        st.session_state.tabla = st.session_state.tabla[
-            st.session_state.tabla["DNI"] != eliminar_dni
-        ]
+        st.session_state.tabla = pd.concat(
+            [st.session_state.tabla, pd.DataFrame([nuevo])],
+            ignore_index=True
+        )
         st.session_state.df_edit = st.session_state.tabla.copy()
-        st.success("✅ Trabajador eliminado")
+        st.success("✅ Trabajador agregado")
+        st.rerun()
 
-    # =========================
-    # EDITAR TABLA
-    # =========================
-    st.subheader("✍️ Registro por trabajador y lote")
-    with st.form("form_edicion"):
-        df_edit = st.data_editor(st.session_state.df_edit, use_container_width=True)
-        if st.form_submit_button("💾 Actualizar tabla"):
-            st.session_state.tabla = df_edit.copy()
-            st.session_state.df_edit = df_edit.copy()
-            st.success("✅ Tabla actualizada")
+# =========================
+# ELIMINAR TRABAJADOR
+# =========================
+st.subheader("➖ Eliminar trabajador")
+eliminar_dni = st.text_input("DNI a eliminar").strip().zfill(8)
+if st.button("Eliminar trabajador"):
+    st.session_state.tabla = st.session_state.tabla[
+        st.session_state.tabla["DNI"] != eliminar_dni
+    ]
+    st.session_state.df_edit = st.session_state.tabla.copy()
+    st.success("✅ Trabajador eliminado")
 
-    # =========================
-    # CÁLCULO FINAL
-    # =========================
-    df_final = st.session_state.tabla.copy()
-    pagos = []
+# =========================
+# EDITAR TABLA
+# =========================
+st.subheader("✍️ Registro por trabajador y lote")
+with st.form("form_edicion"):
+    df_edit = st.data_editor(st.session_state.df_edit, use_container_width=True)
+    if st.form_submit_button("💾 Actualizar tabla"):
+        st.session_state.tabla = df_edit.copy()
+        st.session_state.df_edit = df_edit.copy()
+        st.success("✅ Tabla actualizada")
 
-    for lote in lotes:
-        col = f"PAGO_{lote}"
-        df_final[col] = df_final.apply(
-            lambda r: round(
-                reglas.get(str(r["CARGO"]).upper(), 0)
-                * config_lotes[lote]["MONTO"]
-                * (float(r[f"P_{lote}"]) / 100)
-                * factor_faltas(r[f"F_{lote}"]),
-                2
-            ),
-            axis=1
-        )
-        pagos.append(col)
+# =========================
+# CÁLCULO FINAL
+# =========================
+df_final = st.session_state.tabla.copy()
+pagos = []
 
-    df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
+for lote in lotes:
+    col = f"PAGO_{lote}"
+    df_final[col] = df_final.apply(
+        lambda r: round(
+            reglas.get(str(r["CARGO"]).upper(), 0)
+            * config_lotes[lote]["MONTO"]
+            * (float(r[f"P_{lote}"]) / 100)
+            * factor_faltas(r[f"F_{lote}"]),
+            2
+        ),
+        axis=1
+    )
+    pagos.append(col)
 
-    # =========================
-    # RESULTADO FINAL
-    # =========================
-    st.subheader("💰 Resultado final")
-    st.dataframe(df_final, use_container_width=True)
+df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
 
-    # =========================
-    # GRÁFICO
-    # =========================
-    st.subheader("📊 Distribución de bonos por trabajador")
+# =========================
+# RESULTADO FINAL
+# =========================
+st.subheader("💰 Resultado final")
+st.dataframe(df_final, use_container_width=True)
 
-    fig = px.bar(
-        df_final,
-        x="NOMBRE COMPLETO",
-        y="TOTAL S/",
-        text="TOTAL S/",
-        title="Bono total por trabajador"
+# =========================
+# GRÁFICO
+# =========================
+st.subheader("📊 Distribución de bonos por trabajador")
+
+fig = px.bar(
+    df_final,
+    x="NOMBRE COMPLETO",
+    y="TOTAL S/",
+    text="TOTAL S/",
+    title="Bono total por trabajador"
+)
+
+fig.update_traces(
+    texttemplate="S/ %{text:,.2f}",
+    textposition="outside",
+    cliponaxis=False
+)
+
+fig.update_layout(
+    xaxis_tickangle=-45,
+    height=550,
+    margin=dict(t=100),
+    yaxis=dict(rangemode="tozero")
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# =========================
+# EXPORTAR (UNA SOLA HOJA)
+# =========================
+output = BytesIO()
+
+with pd.ExcelWriter(output, engine="openpyxl") as writer:
+
+    sheet_name = "BONO_REPRODUCTORAS"
+    fila_actual = 0
+
+    # -------------------------
+    # ENCABEZADO GENERAL
+    # -------------------------
+    encabezado = pd.DataFrame({
+        "Campo": [
+            "Granja",
+            "Tipo de Proceso",
+            "Lotes",
+            "Fecha de Generación"
+        ],
+        "Valor": [
+            st.session_state.get("granja_seleccionada", ""),
+            tipo,
+            ", ".join(lotes),
+            pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+        ]
+    })
+
+    encabezado.to_excel(
+        writer,
+        sheet_name=sheet_name,
+        index=False,
+        startrow=fila_actual
     )
 
-    fig.update_traces(
-        texttemplate="S/ %{text:,.2f}",
-        textposition="outside",
-        cliponaxis=False
+    fila_actual += len(encabezado) + 2
+
+    # -------------------------
+    # CONFIGURACIÓN DE LOTES
+    # -------------------------
+    df_lotes = pd.DataFrame([
+        {
+            "Lote": l,
+            "Genética": config_lotes[l]["GENETICA"],
+            "Monto S/": config_lotes[l]["MONTO"]
+        }
+        for l in lotes
+    ])
+
+    df_lotes.to_excel(
+        writer,
+        sheet_name=sheet_name,
+        index=False,
+        startrow=fila_actual
     )
 
-    fig.update_layout(
-        xaxis_tickangle=-45,
-        height=550,
-        margin=dict(t=100),
-        yaxis=dict(rangemode="tozero")
+    fila_actual += len(df_lotes) + 3
+
+    # -------------------------
+    # DETALLE COMPLETO TRABAJADORES
+    # -------------------------
+    df_final.to_excel(
+        writer,
+        sheet_name=sheet_name,
+        index=False,
+        startrow=fila_actual
     )
 
-    st.plotly_chart(fig, use_container_width=True)
-
-    # =========================
-    # EXPORTAR (UNA SOLA HOJA)
-    # =========================
-    output = BytesIO()
-
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-
-        sheet_name = "BONO_REPRODUCTORAS"
-        fila_actual = 0
-
-        # -------------------------
-        # ENCABEZADO GENERAL
-        # -------------------------
-        encabezado = pd.DataFrame({
-            "Campo": [
-                "Granja",
-                "Tipo de Proceso",
-                "Lotes",
-                "Fecha de Generación"
-            ],
-            "Valor": [
-                st.session_state.get("granja_seleccionada", ""),
-                tipo,
-                ", ".join(lotes),
-                pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-            ]
-        })
-
-        encabezado.to_excel(
-            writer,
-            sheet_name=sheet_name,
-            index=False,
-            startrow=fila_actual
-        )
-
-        fila_actual += len(encabezado) + 2
-
-        # -------------------------
-        # CONFIGURACIÓN DE LOTES
-        # -------------------------
-        df_lotes = pd.DataFrame([
-            {
-                "Lote": l,
-                "Genética": config_lotes[l]["GENETICA"],
-                "Monto S/": config_lotes[l]["MONTO"]
-            }
-            for l in lotes
-        ])
-
-        df_lotes.to_excel(
-            writer,
-            sheet_name=sheet_name,
-            index=False,
-            startrow=fila_actual
-        )
-
-        fila_actual += len(df_lotes) + 3
-
-        # -------------------------
-        # DETALLE COMPLETO TRABAJADORES
-        # -------------------------
-        df_final.to_excel(
-            writer,
-            sheet_name=sheet_name,
-            index=False,
-            startrow=fila_actual
-        )
-
-    st.download_button(
-        "📥 Descargar archivo final",
-        data=output.getvalue(),
-        file_name="bono_reproductoras_final.xlsx"
-    )
+st.download_button(
+    "📥 Descargar archivo final",
+    data=output.getvalue(),
+    file_name="bono_reproductoras_final.xlsx"
+)
