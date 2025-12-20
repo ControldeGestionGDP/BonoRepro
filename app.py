@@ -119,14 +119,17 @@ if archivo_dni and archivo_base:
     st.success("✅ Cruce de trabajadores realizado")
 
     # =========================
-    # 🏡 GRANJA
+    # 🏡 GRANJA (MODIFICADO SOLO AQUÍ)
     # =========================
     st.subheader("🏡 Granja")
 
-    if "granjas" not in st.session_state:
-        st.session_state.granjas = [
+    if "granjas_base" not in st.session_state:
+        st.session_state.granjas_base = [
             "Chilco I", "Chilco II", "Chilco III", "Chilco IV"
         ]
+
+    if "granjas" not in st.session_state:
+        st.session_state.granjas = st.session_state.granjas_base.copy()
 
     opcion_granja = st.selectbox(
         "Seleccione la granja",
@@ -141,6 +144,12 @@ if archivo_dni and archivo_base:
             st.rerun()
     else:
         st.session_state.granja_seleccionada = opcion_granja
+
+        if opcion_granja not in st.session_state.granjas_base:
+            if st.button("🗑️ Eliminar granja"):
+                st.session_state.granjas.remove(opcion_granja)
+                st.success("✅ Granja eliminada")
+                st.rerun()
 
     # =========================
     # TIPO DE PROCESO
@@ -198,7 +207,7 @@ if archivo_dni and archivo_base:
         st.session_state.df_edit = st.session_state.df_edit[st.session_state.tabla.columns]
 
     # =========================
-    # AGREGAR TRABAJADOR (CORREGIDO)
+    # AGREGAR TRABAJADOR
     # =========================
     st.subheader("➕ Agregar trabajador")
 
