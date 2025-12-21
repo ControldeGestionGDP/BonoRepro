@@ -318,6 +318,7 @@ st.download_button(
     "📥 Descargar archivo final",
     data=output.getvalue(),
     file_name="bono_reproductoras_final.xlsx"
+     key="download_bono_final"
 )
 
 # =========================
@@ -379,3 +380,4 @@ with tab2:
 
             except Exception:
                 st.error("❌ Error al enviar el correo")
+
