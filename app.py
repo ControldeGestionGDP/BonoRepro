@@ -308,21 +308,8 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
 
-import smtplib
-from email.message import EmailMessage
-
 # =========================
-# DESCARGA FINAL
-# =========================
-st.download_button(
-    "📥 Descargar archivo final",
-    data=output.getvalue(),
-    file_name="bono_reproductoras_final.xlsx",
-     key="download_bono_final"
-)
-
-# =========================
-# ENVÍO POR CORREO / PREVISUALIZAR
+# PREVISUALIZAR Y ENVIAR POR CORREO (MICROSOFT 365)
 # =========================
 import smtplib
 from email.message import EmailMessage
@@ -331,26 +318,28 @@ st.subheader("📬 Opciones finales")
 
 tab1, tab2 = st.tabs(["📊 Previsualizar resultado", "📧 Enviar por correo"])
 
-# --- TAB 1: PREVISUALIZAR ---
+# -------- TAB 1: PREVISUALIZAR --------
 with tab1:
     st.markdown("### 💰 Resultado final completo")
     st.dataframe(df_final, use_container_width=True)
 
-# --- TAB 2: ENVIAR POR CORREO ---
+# -------- TAB 2: ENVIAR POR CORREO --------
 with tab2:
-    st.markdown("### 📧 Enviar resultado por correo")
+    st.markdown("### 📧 Enviar resultado por correo corporativo")
 
-    correo_destino = st.text_input("Correo destino")
+    correo_destino = st.text_input("Correo destino", key="correo_destino")
     asunto = st.text_input(
         "Asunto",
-        value="Resultado Bono Reproductoras GDP"
+        value="Resultado Bono Reproductoras GDP",
+        key="asunto_correo"
     )
     mensaje = st.text_area(
         "Mensaje",
-        value="Adjunto encontrará el resultado del bono generado."
+        value="Adjunto encontrará el resultado del bono generado.",
+        key="mensaje_correo"
     )
 
-    if st.button("📨 Enviar correo"):
+    if st.button("📨 Enviar correo", key="btn_enviar_correo"):
         if not correo_destino:
             st.warning("Ingrese un correo destino")
         else:
@@ -378,7 +367,5 @@ with tab2:
 
                 st.success("✅ Correo enviado correctamente")
 
-            except Exception:
+            except Exception as e:
                 st.error("❌ Error al enviar el correo")
-
-
