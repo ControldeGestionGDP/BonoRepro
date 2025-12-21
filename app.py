@@ -362,8 +362,8 @@ with tab2:
 
                 with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
                     smtp.login(
-                        st.secrets["EMAIL_USER"],
-                        st.secrets["EMAIL_PASS"]
+                        st.secrets["controldegestiongdp@donpollo.pe"],
+                        st.secrets["Ggnch062024"]
                     )
                     smtp.send_message(msg)
 
@@ -371,5 +371,6 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
