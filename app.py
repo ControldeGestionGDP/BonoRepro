@@ -312,22 +312,30 @@ import smtplib
 from email.message import EmailMessage
 
 # =========================
-# PESTAÑAS FINALES
+# DESCARGA FINAL
 # =========================
+st.download_button(
+    "📥 Descargar archivo final",
+    data=output.getvalue(),
+    file_name="bono_reproductoras_final.xlsx"
+)
+
+# =========================
+# ENVÍO POR CORREO / PREVISUALIZAR
+# =========================
+import smtplib
+from email.message import EmailMessage
+
 st.subheader("📬 Opciones finales")
 
 tab1, tab2 = st.tabs(["📊 Previsualizar resultado", "📧 Enviar por correo"])
 
-# -------------------------
-# TAB 1: PREVISUALIZAR
-# -------------------------
+# --- TAB 1: PREVISUALIZAR ---
 with tab1:
     st.markdown("### 💰 Resultado final completo")
     st.dataframe(df_final, use_container_width=True)
 
-# -------------------------
-# TAB 2: ENVIAR POR CORREO
-# -------------------------
+# --- TAB 2: ENVIAR POR CORREO ---
 with tab2:
     st.markdown("### 📧 Enviar resultado por correo")
 
@@ -352,7 +360,6 @@ with tab2:
                 msg["Subject"] = asunto
                 msg.set_content(mensaje)
 
-                # Adjuntar Excel
                 msg.add_attachment(
                     output.getvalue(),
                     maintype="application",
@@ -360,19 +367,15 @@ with tab2:
                     filename="bono_reproductoras_final.xlsx"
                 )
 
-                with smtplib.SMTP_SSL("smtp.office365.com",587) as smtp:
+                with smtplib.SMTP("smtp.office365.com", 587) as smtp:
                     smtp.starttls()
                     smtp.login(
-                        st.secrets["controldegestiongdp@donpollo.pe"],
-                        st.secrets["Ggnch062024"]
+                        st.secrets["EMAIL_USER"],
+                        st.secrets["EMAIL_PASS"]
                     )
                     smtp.send_message(msg)
 
                 st.success("✅ Correo enviado correctamente")
 
-            except Exception as e:
+            except Exception:
                 st.error("❌ Error al enviar el correo")
-
-
-
-
