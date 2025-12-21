@@ -217,9 +217,17 @@ if "granjas_base" not in st.session_state:
 if "granjas" not in st.session_state:
     st.session_state.granjas = st.session_state.granjas_base.copy()
 
+granjas_opciones = st.session_state.granjas + ["➕ Agregar"]
+
+if "granja_seleccionada" in st.session_state and st.session_state.granja_seleccionada in granjas_opciones:
+    index_granja = granjas_opciones.index(st.session_state.granja_seleccionada)
+else:
+    index_granja = 0
+
 opcion_granja = st.selectbox(
     "Seleccione la granja",
-    st.session_state.granjas + ["➕ Agregar"]
+    granjas_opciones,
+    index=index_granja
 )
 
 if opcion_granja == "➕ Agregar":
@@ -237,7 +245,19 @@ else:
             st.rerun()
 
 # Tipo de proceso
-tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
+tipo_opciones = ["PRODUCCIÓN", "LEVANTE"]
+
+if "tipo" in st.session_state and st.session_state.tipo in tipo_opciones:
+    index_tipo = tipo_opciones.index(st.session_state.tipo)
+else:
+    index_tipo = 0
+
+tipo = st.radio(
+    "Tipo de proceso",
+    tipo_opciones,
+    index=index_tipo,
+    horizontal=True
+)
 reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
 
 
@@ -261,13 +281,38 @@ if not confirmar_inicio:
     )
     st.stop()
 st.subheader("🧬 Configuración por lote")
-config_lotes = {}
+
+if "config_lotes" not in st.session_state:
+    st.session_state.config_lotes = {}
+
+config_lotes = st.session_state.config_lotes
 cols = st.columns(len(lotes))
+
 for i, lote in enumerate(lotes):
     with cols[i]:
-        genetica = st.text_input(f"Genética {lote}", "ROSS")
-        monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0, step=50.0)
-        config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
+        valor_gen = config_lotes.get(lote, {}).get("GENETICA", "ROSS")
+        valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 1000.0))
+
+        genetica = st.text_input(
+            f"Genética {lote}",
+            value=valor_gen,
+            key=f"gen_{lote}"
+        )
+
+        monto = st.number_input(
+            f"Monto S/ {lote}",
+            min_value=0.0,
+            value=valor_monto,
+            step=50.0,
+            key=f"monto_{lote}"
+        )
+
+        config_lotes[lote] = {
+            "GENETICA": genetica.upper(),
+            "MONTO": monto
+        }
+
+st.session_state.config_lotes = config_lotes
 
 # SESSION STATE tabla
 if "tabla" not in st.session_state:
@@ -562,6 +607,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
