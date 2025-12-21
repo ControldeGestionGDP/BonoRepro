@@ -360,7 +360,8 @@ with tab2:
                     filename="bono_reproductoras_final.xlsx"
                 )
 
-                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+                with smtplib.SMTP_SSL("smtp.office365.com",587) as smtp:
+                    smtp.starttls()
                     smtp.login(
                         st.secrets["controldegestiongdp@donpollo.pe"],
                         st.secrets["Ggnch062024"]
@@ -371,6 +372,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
