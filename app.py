@@ -174,6 +174,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 if df is None:
     st.warning("Suba un archivo para continuar")
     st.stop()
+
 # =========================
 # FLUJO ORIGINAL
 # =========================
@@ -430,6 +431,7 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
 
 
 
