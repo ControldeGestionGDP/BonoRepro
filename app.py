@@ -138,11 +138,27 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         )
 
         config_lotes = {}
-        for _, r in df_lotes.iterrows():
-            config_lotes[str(r["Lote"])] = {
-                "GENETICA": str(r["Genética"]).upper(),
-                "MONTO": float(r["Monto S/"])
-            }
+for _, r in df_lotes.iterrows():
+
+    if pd.isna(r["Lote"]):
+        continue  # salta filas vacías
+
+    monto_limpio = (
+        str(r["Monto S/"])
+        .replace(",", "")
+        .strip()
+    )
+
+    try:
+        monto = float(monto_limpio)
+    except:
+        monto = 0.0  # valor seguro por defecto
+
+    config_lotes[str(r["Lote"]).strip()] = {
+        "GENETICA": str(r["Genética"]).upper().strip(),
+        "MONTO": monto
+    }
+
 
         # ---------- 3️⃣ Tabla trabajadores ----------
         fila_tabla = raw[raw.iloc[:,0] == "DNI"].index[0]
@@ -535,4 +551,5 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
