@@ -217,6 +217,12 @@ if "granjas_base" not in st.session_state:
 if "granjas" not in st.session_state:
     st.session_state.granjas = st.session_state.granjas_base.copy()
 
+# 🔑 SI VIENE UNA GRANJA DEL EXCEL Y NO EXISTE, SE AGREGA
+if "granja_seleccionada" in st.session_state:
+    granja_excel = st.session_state.granja_seleccionada
+    if granja_excel not in st.session_state.granjas:
+        st.session_state.granjas.append(granja_excel)
+
 granjas_opciones = st.session_state.granjas + ["➕ Agregar"]
 
 if "granja_seleccionada" in st.session_state and st.session_state.granja_seleccionada in granjas_opciones:
@@ -607,6 +613,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
