@@ -341,6 +341,44 @@ with col2:
 with col3:
     st.metric("🏷️ Lote con mayor pago", lote_mayor)
 
+# =========================
+# RESUMEN POR LOTE
+# =========================
+resumen_lote = (
+    df_final[pagos]
+    .sum()
+    .reset_index()
+    .rename(columns={"index": "Lote", 0: "Total S/"})
+)
+
+resumen_lote["Lote"] = resumen_lote["Lote"].str.replace("PAGO_", "")
+resumen_lote["% del total"] = (
+    resumen_lote["Total S/"] / total_general * 100
+).round(2)
+
+st.subheader("📦 Resumen por lote")
+st.dataframe(resumen_lote, use_container_width=True)
+
+fig_lote = px.bar(
+    resumen_lote,
+    x="Lote",
+    y="Total S/",
+    text="Total S/",
+    title="Distribución de pago por lote"
+)
+
+fig_lote.update_traces(
+    texttemplate="S/ %{text:,.2f}",
+    textposition="outside"
+)
+
+fig_lote.update_layout(
+    yaxis=dict(rangemode="tozero"),
+    height=400
+)
+
+st.plotly_chart(fig_lote, use_container_width=True)
+
 # -------- TAB 1: PREVISUALIZAR --------
 with tab1:
     st.markdown("### 💰 Resultado final completo")
@@ -379,24 +417,36 @@ with tab2:
                     justify="center"
                 )
 
+tabla_lote_html = resumen_lote.to_html(
+    index=False,
+    border=1,
+    justify="center"
+)
+
+
                 cuerpo_html = f"""
-                <html>
-                    <body>
-                        <h2>Bono Reproductoras GDP</h2>
-                        <p><strong>Granja:</strong> {st.session_state.get("granja_seleccionada","")}</p>
-                        <p><strong>Tipo de proceso:</strong> {tipo}</p>
-                        <p><strong>Lotes:</strong> {", ".join(lotes)}</p>
-                        <p><strong>Fecha:</strong> {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}</p>
+<html>
+    <body>
+        <h2>Bono Reproductoras GDP</h2>
 
-                        <h3>💰 Resultado final</h3>
-                        {tabla_html}
+        <p><strong>Granja:</strong> {st.session_state.get("granja_seleccionada","")}</p>
+        <p><strong>Tipo de proceso:</strong> {tipo}</p>
+        <p><strong>Lotes:</strong> {", ".join(lotes)}</p>
+        <p><strong>Fecha:</strong> {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}</p>
 
-                        <p>Adjunto se envía el archivo Excel con el detalle completo.</p>
-                        <p>Saludos.</p>
-                        <p>Equipo de Control de Gestión.</p>
-                    </body>
-                </html>
-                """
+        <h3>📦 Resumen por lote</h3>
+        {tabla_lote_html}
+
+        <h3>💰 Resultado final por trabajador</h3>
+        {tabla_html}
+
+        <p>Adjunto se envía el archivo Excel con el detalle completo.</p>
+        <p>Saludos.</p>
+        <p><strong>Equipo de Control de Gestión</strong></p>
+    </body>
+</html>
+"""
+
 
                 msg.add_alternative(cuerpo_html, subtype="html")
 
@@ -419,5 +469,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
-
 
