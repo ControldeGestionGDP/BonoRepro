@@ -445,7 +445,18 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     # Detalle trabajadores
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
-st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+nombre_archivo = (
+    f"Bono_Reproductoras_"
+    f"{st.session_state.get('granja_seleccionada','NA').replace(' ','')}_"
+    f"{tipo}_"
+    f"{pd.Timestamp.now():%Y%m%d_%H%M}.xlsx"
+)
+
+st.download_button(
+    "📥 Descargar archivo final",
+    data=output.getvalue(),
+    file_name=nombre_archivo
+)
 
 # =========================
 # PREVISUALIZAR Y ENVIAR POR CORREO (MICROSOFT 365)
@@ -613,6 +624,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
