@@ -138,6 +138,10 @@ if df is None:
 
 # 🏡 Granja
 st.subheader("🏡 Granja")
+st.warning(
+    "⚠️ Una vez confirmado, no se recomienda cambiar Granja o Tipo de proceso "
+    "porque afectaría los registros ingresados."
+)
 if "granjas_base" not in st.session_state:
     st.session_state.granjas_base = ["Chilco I", "Chilco II", "Chilco III", "Chilco IV"]
 
@@ -166,6 +170,15 @@ else:
 # Tipo de proceso
 tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
 reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
+
+# Confirmación de datos iniciales
+confirmar_inicio = st.checkbox(
+    "✅ Confirmo que la Granja y el Tipo de proceso son correctos"
+)
+
+if not confirmar_inicio:
+    st.info("🔒 Confirme la Granja y el Tipo de proceso para continuar.")
+    st.stop()
 
 # Lotes
 lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
@@ -464,3 +477,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
