@@ -172,10 +172,6 @@ tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
 reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
 
 
-if not confirmar_inicio:
-    st.info("🔒 Confirme la Granja y el Tipo de proceso para continuar.")
-    st.stop()
-
 # Lotes
 lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
 lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
@@ -483,5 +479,6 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
