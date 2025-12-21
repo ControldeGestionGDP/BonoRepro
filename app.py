@@ -400,7 +400,7 @@ with tab2:
         key="mensaje_correo"
     )
 
-    if st.button("📨 Enviar correo", key="btn_enviar_correo"):
+   if st.button("📨 Enviar correo", key="btn_enviar_correo"):
     if not correo_destino:
         st.warning("Ingrese un correo destino")
     else:
