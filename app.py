@@ -369,6 +369,8 @@ with tab2:
                         {tabla_html}
 
                         <p>Adjunto se envía el archivo Excel con el detalle completo.</p>
+                        <p>Saludos.</p>
+                        <p>Equipo de Control de Gestión.</p>
                     </body>
                 </html>
                 """
@@ -394,3 +396,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
