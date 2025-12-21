@@ -108,20 +108,62 @@ if opcion_inicio == "➕ Iniciar desde cero":
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
     if archivo_prev:
-        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
-        fila_inicio = None
-        for i, row in df_prev_raw.iterrows():
-            if "DNI" in row.values:
-                fila_inicio = i
-                break
-        if fila_inicio is None:
-            st.error("❌ No se encontró la tabla de trabajadores en el Excel")
-        else:
-            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
-            df.columns = df.columns.str.strip().str.upper()
-            if "DNI" in df.columns:
-                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
-            st.success("✅ Excel previamente cargado")
+        raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", header=None)
+
+        # ---------- 1️⃣ Encabezado ----------
+        encabezado = raw.iloc[0:4, 0:2]
+        encabezado.columns = ["CAMPO", "VALOR"]
+        encabezado["CAMPO"] = encabezado["CAMPO"].str.upper()
+
+        st.session_state.granja_seleccionada = encabezado.loc[
+            encabezado["CAMPO"] == "GRANJA", "VALOR"
+        ].values[0]
+
+        tipo = encabezado.loc[
+            encabezado["CAMPO"] == "TIPO DE PROCESO", "VALOR"
+        ].values[0]
+
+        lotes_txt = encabezado.loc[
+            encabezado["CAMPO"] == "LOTES", "VALOR"
+        ].values[0]
+
+        lotes = [l.strip() for l in lotes_txt.split(",")]
+
+        # ---------- 2️⃣ Configuración de lotes ----------
+        fila_lotes = raw[raw.iloc[:,0] == "Lote"].index[0]
+        df_lotes = pd.read_excel(
+            archivo_prev,
+            sheet_name="BONO_REPRODUCTORAS",
+            header=fila_lotes
+        )
+
+        config_lotes = {}
+        for _, r in df_lotes.iterrows():
+            config_lotes[str(r["Lote"])] = {
+                "GENETICA": str(r["Genética"]).upper(),
+                "MONTO": float(r["Monto S/"])
+            }
+
+        # ---------- 3️⃣ Tabla trabajadores ----------
+        fila_tabla = raw[raw.iloc[:,0] == "DNI"].index[0]
+        df = pd.read_excel(
+            archivo_prev,
+            sheet_name="BONO_REPRODUCTORAS",
+            header=fila_tabla,
+            dtype=str
+        )
+
+        df.columns = df.columns.str.strip().str.upper()
+        df["DNI"] = df["DNI"].str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
+
+        # Guardar en session_state
+        st.session_state.tabla = df.copy()
+        st.session_state.df_edit = df.copy()
+        st.session_state.config_lotes = config_lotes
+        st.session_state.lotes = lotes
+        st.session_state.tipo = tipo
+
+        st.success("✅ Excel cargado y reconstruido correctamente")
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -173,8 +215,12 @@ reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
 
 
 # Lotes
-lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
-lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
+if "lotes" in st.session_state:
+    lotes = st.session_state.lotes
+    st.text_input("Lotes", ", ".join(lotes), disabled=True)
+else:
+    lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
+    lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
 
 # Confirmación de datos iniciales
 confirmar_inicio = st.checkbox(
@@ -489,3 +535,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
