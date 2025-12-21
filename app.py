@@ -35,7 +35,7 @@ if not st.session_state.ingresar:
 
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        if st.button("🚀 Ingresar al sistema", use_container_width=True):
+        if st.button("🚀 Ingresar al sistema", use_container_width=True, key="btn_ingresar"):
             st.session_state.ingresar = True
             st.rerun()
     st.stop()
@@ -46,7 +46,8 @@ if not st.session_state.ingresar:
 st.subheader("Seleccione cómo desea iniciar")
 opcion_inicio = st.selectbox(
     "Opciones",
-    ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"]
+    ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"],
+    key="opcion_inicio"
 )
 
 # =========================
@@ -82,8 +83,8 @@ df = None
 df_base = None
 
 if opcion_inicio == "➕ Iniciar desde cero":
-    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
-    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
+    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"], key="dni_excel")
+    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"], key="base_excel")
     
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
@@ -123,15 +124,25 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
     if backups:
         seleccion = st.selectbox(
             "📁 Backups guardados",
-            ["Seleccione un backup"] + backups
+            ["Seleccione un backup"] + backups,
+            key="select_backup"
         )
         if seleccion != "Seleccione un backup":
             archivo_prev = os.path.join(BACKUP_DIR, seleccion)
     else:
-        archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
+        archivo_prev = st.file_uploader(
+            "📂 Subir Excel previamente generado",
+            type=["xlsx"],
+            key="excel_manual"
+        )
 
     if archivo_prev:
-        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
+        df_prev_raw = pd.read_excel(
+            archivo_prev,
+            sheet_name="BONO_REPRODUCTORAS",
+            dtype=str,
+            header=None
+        )
         fila_inicio = None
         for i, row in df_prev_raw.iterrows():
             if "DNI" in row.values:
@@ -141,9 +152,20 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         if fila_inicio is None:
             st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
+            df = pd.read_excel(
+                archivo_prev,
+                sheet_name="BONO_REPRODUCTORAS",
+                dtype=str,
+                header=fila_inicio
+            )
             df.columns = df.columns.str.strip().str.upper()
-            df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
+            df["DNI"] = (
+                df["DNI"]
+                .astype(str)
+                .str.replace("'", "")
+                .str.replace(".0","",regex=False)
+                .str.zfill(8)
+            )
             st.success("✅ Backup cargado correctamente")
 
 # =========================
@@ -409,4 +431,5 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
 
