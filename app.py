@@ -340,59 +340,57 @@ with tab2:
     )
 
     if st.button("📨 Enviar correo", key="btn_enviar_correo"):
-    if not correo_destino:
-        st.warning("Ingrese un correo destino")
-    else:
-        try:
-            msg = EmailMessage()
-            msg["From"] = st.secrets["EMAIL_USER"]
-            msg["To"] = correo_destino
-            msg["Subject"] = asunto
+        if not correo_destino:
+            st.warning("Ingrese un correo destino")
+        else:
+            try:
+                msg = EmailMessage()
+                msg["From"] = st.secrets["EMAIL_USER"]
+                msg["To"] = correo_destino
+                msg["Subject"] = asunto
 
-            # --- Convertir tabla a HTML ---
-            tabla_html = df_final.to_html(
-                index=False,
-                border=1,
-                justify="center"
-            )
-
-            # --- Cuerpo del correo en HTML ---
-            cuerpo_html = f"""
-            <html>
-                <body>
-                    <h2>Bono Reproductoras GDP</h2>
-                    <p><strong>Granja:</strong> {st.session_state.get("granja_seleccionada","")}</p>
-                    <p><strong>Tipo de proceso:</strong> {tipo}</p>
-                    <p><strong>Lotes:</strong> {", ".join(lotes)}</p>
-                    <p><strong>Fecha de generación:</strong> {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}</p>
-
-                    <h3>💰 Resultado final</h3>
-                    {tabla_html}
-
-                    <p>Adjunto se envía el archivo Excel con el detalle completo.</p>
-                </body>
-            </html>
-            """
-
-            msg.add_alternative(cuerpo_html, subtype="html")
-
-            # Adjuntar Excel
-            msg.add_attachment(
-                output.getvalue(),
-                maintype="application",
-                subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                filename="bono_reproductoras_final.xlsx"
-            )
-
-            with smtplib.SMTP("smtp.office365.com", 587) as smtp:
-                smtp.starttls()
-                smtp.login(
-                    st.secrets["EMAIL_USER"],
-                    st.secrets["EMAIL_PASS"]
+                # ---- TABLA A HTML ----
+                tabla_html = df_final.to_html(
+                    index=False,
+                    border=1,
+                    justify="center"
                 )
-                smtp.send_message(msg)
 
-            st.success("✅ Correo enviado correctamente")
+                cuerpo_html = f"""
+                <html>
+                    <body>
+                        <h2>Bono Reproductoras GDP</h2>
+                        <p><strong>Granja:</strong> {st.session_state.get("granja_seleccionada","")}</p>
+                        <p><strong>Tipo de proceso:</strong> {tipo}</p>
+                        <p><strong>Lotes:</strong> {", ".join(lotes)}</p>
+                        <p><strong>Fecha:</strong> {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}</p>
 
-        except Exception as e:
-            st.error("❌ Error al enviar el correo")
+                        <h3>💰 Resultado final</h3>
+                        {tabla_html}
+
+                        <p>Adjunto se envía el archivo Excel con el detalle completo.</p>
+                    </body>
+                </html>
+                """
+
+                msg.add_alternative(cuerpo_html, subtype="html")
+
+                msg.add_attachment(
+                    output.getvalue(),
+                    maintype="application",
+                    subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    filename="bono_reproductoras_final.xlsx"
+                )
+
+                with smtplib.SMTP("smtp.office365.com", 587) as smtp:
+                    smtp.starttls()
+                    smtp.login(
+                        st.secrets["EMAIL_USER"],
+                        st.secrets["EMAIL_PASS"]
+                    )
+                    smtp.send_message(msg)
+
+                st.success("✅ Correo enviado correctamente")
+
+            except Exception as e:
+                st.error("❌ Error al enviar el correo")
