@@ -388,8 +388,18 @@ fig_lote.update_traces(
 )
 
 fig_lote.update_layout(
-    yaxis=dict(rangemode="tozero"),
-    height=400
+    yaxis=dict(
+        rangemode="tozero",
+        automargin=True
+    ),
+    height=450,
+    margin=dict(t=120, b=50)
+)
+
+fig_lote.update_traces(
+    texttemplate="S/ %{text:,.2f}",
+    textposition="outside",
+    cliponaxis=False
 )
 
 st.plotly_chart(fig_lote, use_container_width=True)
@@ -479,6 +489,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
