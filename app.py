@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 import plotly.express as px
-import os
 
 # =========================
 # CONFIGURACIÓN GLOBAL
@@ -11,12 +10,6 @@ st.set_page_config(
     page_title="Bono Reproductoras GDP",
     layout="wide"
 )
-
-# =========================
-# BACKUPS
-# =========================
-BACKUP_DIR = "backups"
-os.makedirs(BACKUP_DIR, exist_ok=True)
 
 # =========================
 # PORTADA
@@ -35,7 +28,7 @@ if not st.session_state.ingresar:
 
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
-        if st.button("🚀 Ingresar al sistema", use_container_width=True, key="btn_ingresar"):
+        if st.button("🚀 Ingresar al sistema", use_container_width=True):
             st.session_state.ingresar = True
             st.rerun()
     st.stop()
@@ -46,8 +39,7 @@ if not st.session_state.ingresar:
 st.subheader("Seleccione cómo desea iniciar")
 opcion_inicio = st.selectbox(
     "Opciones",
-    ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"],
-    key="opcion_inicio"
+    ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"]
 )
 
 # =========================
@@ -83,8 +75,8 @@ df = None
 df_base = None
 
 if opcion_inicio == "➕ Iniciar desde cero":
-    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"], key="uploader_dni")
-    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"], key="uploader_base")
+    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
+    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
     
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
@@ -114,59 +106,22 @@ if opcion_inicio == "➕ Iniciar desde cero":
         st.success("✅ Cruce de trabajadores realizado")
 
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
-
-    backups = sorted(
-        [f for f in os.listdir(BACKUP_DIR) if f.endswith(".xlsx")],
-        reverse=True
-    )
-
-    archivo_prev = None
-    if backups:
-        seleccion = st.selectbox(
-            "📁 Backups guardados",
-            ["Seleccione un backup"] + backups,
-            key="select_backup"
-        )
-        if seleccion != "Seleccione un backup":
-            archivo_prev = os.path.join(BACKUP_DIR, seleccion)
-    else:
-        archivo_prev = st.file_uploader(
-            "📂 Subir Excel previamente generado",
-            type=["xlsx"],
-            key="uploader_prev"
-        )
-
+    archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
     if archivo_prev:
-        df_prev_raw = pd.read_excel(
-            archivo_prev,
-            sheet_name="BONO_REPRODUCTORAS",
-            dtype=str,
-            header=None
-        )
+        df_prev_raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=None)
         fila_inicio = None
         for i, row in df_prev_raw.iterrows():
             if "DNI" in row.values:
                 fila_inicio = i
                 break
-
         if fila_inicio is None:
             st.error("❌ No se encontró la tabla de trabajadores en el Excel")
         else:
-            df = pd.read_excel(
-                archivo_prev,
-                sheet_name="BONO_REPRODUCTORAS",
-                dtype=str,
-                header=fila_inicio
-            )
+            df = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", dtype=str, header=fila_inicio)
             df.columns = df.columns.str.strip().str.upper()
-            df["DNI"] = (
-                df["DNI"]
-                .astype(str)
-                .str.replace("'", "")
-                .str.replace(".0","",regex=False)
-                .str.zfill(8)
-            )
-            st.success("✅ Backup cargado correctamente")
+            if "DNI" in df.columns:
+                df["DNI"] = df["DNI"].astype(str).str.replace("'", "").str.replace(".0","",regex=False).str.zfill(8)
+            st.success("✅ Excel previamente cargado")
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -174,85 +129,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 if df is None:
     st.warning("Suba un archivo para continuar")
     st.stop()
-
-# =========================
-# FLUJO ORIGINAL
-# =========================
-
-# 🏡 Granja
-st.subheader("🏡 Granja")
-if "granjas_base" not in st.session_state:
-    st.session_state.granjas_base = ["Chilco I", "Chilco II", "Chilco III", "Chilco IV"]
-
-if "granjas" not in st.session_state:
-    st.session_state.granjas = st.session_state.granjas_base.copy()
-
-opcion_granja = st.selectbox(
-    "Seleccione la granja",
-    st.session_state.granjas + ["➕ Agregar"]
-)
-
-if opcion_granja == "➕ Agregar":
-    nueva_granja = st.text_input("Ingrese nueva granja")
-    if nueva_granja and st.button("Agregar granja"):
-        st.session_state.granjas.append(nueva_granja)
-        st.success("✅ Granja agregada")
-        st.rerun()
-else:
-    st.session_state.granja_seleccionada = opcion_granja
-    if opcion_granja not in st.session_state.granjas_base:
-        if st.button("🗑️ Eliminar granja"):
-            st.session_state.granjas.remove(opcion_granja)
-            st.success("✅ Granja eliminada")
-            st.rerun()
-
-# Tipo de proceso
-tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
-reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
-
-# Lotes
-lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
-lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
-
-# Configuración por lote
-st.subheader("🧬 Configuración por lote")
-config_lotes = {}
-cols = st.columns(len(lotes))
-for i, lote in enumerate(lotes):
-    with cols[i]:
-        genetica = st.text_input(f"Genética {lote}", "ROSS")
-        monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0, step=50.0)
-        config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
-
-# =========================
-# TABLA
-# =========================
-if "tabla" not in st.session_state:
-    st.session_state.tabla = df.copy()
-    for lote in lotes:
-        st.session_state.tabla[f"P_{lote}"] = 0.0
-        st.session_state.tabla[f"F_{lote}"] = 0
-
-if "df_edit" not in st.session_state:
-    st.session_state.df_edit = st.session_state.tabla.copy()
-
-# =========================
-# BACKUP
-# =========================
-st.subheader("💾 Backup del trabajo")
-
-if st.button("💾 Guardar backup"):
-    timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-    ruta = os.path.join(BACKUP_DIR, f"backup_bono_{timestamp}.xlsx")
-
-    with pd.ExcelWriter(ruta, engine="openpyxl") as writer:
-        st.session_state.tabla.to_excel(
-            writer,
-            sheet_name="BONO_REPRODUCTORAS",
-            index=False
-        )
-
-    st.success("✅ Backup guardado correctamente")
 
 # =========================
 # =========================
@@ -431,7 +307,3 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
-
-
-
-
