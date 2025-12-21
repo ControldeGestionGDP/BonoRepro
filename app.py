@@ -307,3 +307,69 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
+import smtplib
+from email.message import EmailMessage
+
+# =========================
+# PESTAÑAS FINALES
+# =========================
+st.subheader("📬 Opciones finales")
+
+tab1, tab2 = st.tabs(["📊 Previsualizar resultado", "📧 Enviar por correo"])
+
+# -------------------------
+# TAB 1: PREVISUALIZAR
+# -------------------------
+with tab1:
+    st.markdown("### 💰 Resultado final completo")
+    st.dataframe(df_final, use_container_width=True)
+
+# -------------------------
+# TAB 2: ENVIAR POR CORREO
+# -------------------------
+with tab2:
+    st.markdown("### 📧 Enviar resultado por correo")
+
+    correo_destino = st.text_input("Correo destino")
+    asunto = st.text_input(
+        "Asunto",
+        value="Resultado Bono Reproductoras GDP"
+    )
+    mensaje = st.text_area(
+        "Mensaje",
+        value="Adjunto encontrará el resultado del bono generado."
+    )
+
+    if st.button("📨 Enviar correo"):
+        if not correo_destino:
+            st.warning("Ingrese un correo destino")
+        else:
+            try:
+                msg = EmailMessage()
+                msg["From"] = st.secrets["EMAIL_USER"]
+                msg["To"] = correo_destino
+                msg["Subject"] = asunto
+                msg.set_content(mensaje)
+
+                # Adjuntar Excel
+                msg.add_attachment(
+                    output.getvalue(),
+                    maintype="application",
+                    subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    filename="bono_reproductoras_final.xlsx"
+                )
+
+                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+                    smtp.login(
+                        st.secrets["EMAIL_USER"],
+                        st.secrets["EMAIL_PASS"]
+                    )
+                    smtp.send_message(msg)
+
+                st.success("✅ Correo enviado correctamente")
+
+            except Exception as e:
+                st.error("❌ Error al enviar el correo")
+
+
