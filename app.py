@@ -83,8 +83,8 @@ df = None
 df_base = None
 
 if opcion_inicio == "➕ Iniciar desde cero":
-    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"], key="dni_excel")
-    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"], key="base_excel")
+    archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"], key="uploader_dni")
+    archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"], key="uploader_base")
     
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
@@ -133,7 +133,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         archivo_prev = st.file_uploader(
             "📂 Subir Excel previamente generado",
             type=["xlsx"],
-            key="excel_manual"
+            key="uploader_prev"
         )
 
     if archivo_prev:
@@ -174,7 +174,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 if df is None:
     st.warning("Suba un archivo para continuar")
     st.stop()
-
 # =========================
 # FLUJO ORIGINAL
 # =========================
@@ -431,5 +430,6 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
 st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+
 
 
