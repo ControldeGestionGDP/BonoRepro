@@ -647,59 +647,60 @@ if tipo == "LEVANTE":
         )
 
     # =========================
-    # MACHOS
-    # =========================
-    st.markdown("### ♂️ Machos")
+# MACHOS
+# =========================
+st.markdown("### ♂️ Machos")
 
-    col4, col5, col6 = st.columns(3)
+col4, col5, col6 = st.columns(3)
 
-    with col4:
-        edad_macho = st.number_input(
-            "Edad ave al entregar a Prod (Machos)",
-            min_value=0,
-            step=1
-        )
+with col4:
+    edad_macho = st.number_input(
+        "Edad ave al entregar a Prod (Machos)",
+        min_value=0,
+        step=1
+    )
 
-        uniformidad_machos = st.number_input(
-            "Uniformidad Machos (%)",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
-            format="%.2f"
-        )
+    uniformidad_machos = st.number_input(
+        "Uniformidad Machos (%)",
+        min_value=0.0,
+        max_value=100.0,
+        step=0.1,
+        format="%.2f"
+    )
 
-        nro_aves_entregadas_m = st.number_input(
-            "Nro Aves Entregadas a Prod (Machos)",
-            min_value=0,
-            step=1
-        )
+    nro_aves_entregadas_m = st.number_input(
+        "Nro Aves Entregadas a Prod (Machos)",
+        min_value=0,
+        step=1
+    )
 
-    with col5:
-        poblacion_inicial_m = st.number_input(
-            "Población Inicial (Machos)",
-            min_value=0,
-            step=1
-        )
+with col5:
+    poblacion_inicial_m = st.number_input(
+        "Población Inicial (Machos)",
+        min_value=0,
+        step=1
+    )
 
-    with col6:
-        peso_entrega_m = st.number_input(
-            "Peso Ave al entregar a Prod (Machos)",
-            min_value=0.0,
-            step=0.01
-        )
+with col6:
+    peso_entrega_m = st.number_input(
+        "Peso Ave al entregar a Prod (Machos)",
+        min_value=0.0,
+        step=0.001,
+        format="%.3f"
+    )
 
-        peso_std_m = st.number_input(
-            "Peso Ave al entregar a Prod STD (Machos)",
-            value=2.955,         # ✅ valor por defecto
-            step=0.01            # ✅ editable
-            format="%.3f"
-        )
+    peso_std_m = st.number_input(
+        "Peso Ave al entregar a Prod STD (Machos)",
+        value=2.955,          # ✅ valor por defecto
+        step=0.001,           # ✅ editable
+        format="%.3f"
+    )
 
-        pct_cumpl_peso_m = st.number_input(
-            "% CUMP. PESO (Machos)",
-            step=0.1,            # (si luego quieres negativos aquí también, ya está listo)
-            format="%.2f"
-        )
+    pct_cumpl_peso_m = st.number_input(
+        "% CUMP. PESO (Machos)",
+        step=0.1,
+        format="%.2f"
+    )
 
     # =========================
     # GUARDAR EN SESSION_STATE
@@ -1088,6 +1089,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
