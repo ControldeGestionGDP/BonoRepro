@@ -217,9 +217,23 @@ if "granjas_base" not in st.session_state:
 if "granjas" not in st.session_state:
     st.session_state.granjas = st.session_state.granjas_base.copy()
 
+# 🔑 SI VIENE UNA GRANJA DEL EXCEL Y NO EXISTE, SE AGREGA
+if "granja_seleccionada" in st.session_state:
+    granja_excel = st.session_state.granja_seleccionada
+    if granja_excel not in st.session_state.granjas:
+        st.session_state.granjas.append(granja_excel)
+
+granjas_opciones = st.session_state.granjas + ["➕ Agregar"]
+
+if "granja_seleccionada" in st.session_state and st.session_state.granja_seleccionada in granjas_opciones:
+    index_granja = granjas_opciones.index(st.session_state.granja_seleccionada)
+else:
+    index_granja = 0
+
 opcion_granja = st.selectbox(
     "Seleccione la granja",
-    st.session_state.granjas + ["➕ Agregar"]
+    granjas_opciones,
+    index=index_granja
 )
 
 if opcion_granja == "➕ Agregar":
@@ -230,14 +244,31 @@ if opcion_granja == "➕ Agregar":
         st.rerun()
 else:
     st.session_state.granja_seleccionada = opcion_granja
+
     if opcion_granja not in st.session_state.granjas_base:
-        if st.button("🗑️ Eliminar granja"):
+        if st.button("🗑️ Eliminar granja", key="btn_eliminar_granja"):
             st.session_state.granjas.remove(opcion_granja)
-            st.success("✅ Granja eliminada")
+
+            # 🔑 limpiar selección actual
+            st.session_state.granja_seleccionada = st.session_state.granjas_base[0]
+
+            st.success(f"✅ Granja '{opcion_granja}' eliminada correctamente")
             st.rerun()
 
 # Tipo de proceso
-tipo = st.radio("Tipo de proceso", ["PRODUCCIÓN","LEVANTE"], horizontal=True)
+tipo_opciones = ["PRODUCCIÓN", "LEVANTE"]
+
+if "tipo" in st.session_state and st.session_state.tipo in tipo_opciones:
+    index_tipo = tipo_opciones.index(st.session_state.tipo)
+else:
+    index_tipo = 0
+
+tipo = st.radio(
+    "Tipo de proceso",
+    tipo_opciones,
+    index=index_tipo,
+    horizontal=True
+)
 reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
 
 
@@ -261,13 +292,38 @@ if not confirmar_inicio:
     )
     st.stop()
 st.subheader("🧬 Configuración por lote")
-config_lotes = {}
+
+if "config_lotes" not in st.session_state:
+    st.session_state.config_lotes = {}
+
+config_lotes = st.session_state.config_lotes
 cols = st.columns(len(lotes))
+
 for i, lote in enumerate(lotes):
     with cols[i]:
-        genetica = st.text_input(f"Genética {lote}", "ROSS")
-        monto = st.number_input(f"Monto S/ {lote}", min_value=0.0, value=1000.0, step=50.0)
-        config_lotes[lote] = {"GENETICA": genetica.upper(), "MONTO": monto}
+        valor_gen = config_lotes.get(lote, {}).get("GENETICA", "ROSS")
+        valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 1000.0))
+
+        genetica = st.text_input(
+            f"Genética {lote}",
+            value=valor_gen,
+            key=f"gen_{lote}"
+        )
+
+        monto = st.number_input(
+            f"Monto S/ {lote}",
+            min_value=0.0,
+            value=valor_monto,
+            step=50.0,
+            key=f"monto_{lote}"
+        )
+
+        config_lotes[lote] = {
+            "GENETICA": genetica.upper(),
+            "MONTO": monto
+        }
+
+st.session_state.config_lotes = config_lotes
 
 # SESSION STATE tabla
 if "tabla" not in st.session_state:
@@ -394,7 +450,18 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     # Detalle trabajadores
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
 
-st.download_button("📥 Descargar archivo final", data=output.getvalue(), file_name="bono_reproductoras_final.xlsx")
+nombre_archivo = (
+    f"Bono_Reproductoras_"
+    f"{st.session_state.get('granja_seleccionada','NA').replace(' ','')}_"
+    f"{tipo}_"
+    f"{pd.Timestamp.now():%Y%m%d_%H%M}.xlsx"
+)
+
+st.download_button(
+    "📥 Descargar archivo final",
+    data=output.getvalue(),
+    file_name=nombre_archivo
+)
 
 # =========================
 # PREVISUALIZAR Y ENVIAR POR CORREO (MICROSOFT 365)
