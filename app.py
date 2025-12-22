@@ -474,7 +474,23 @@ else:
             st.success(f"✅ Granja '{opcion_granja}' eliminada correctamente")
             st.rerun()
 
-# Tipo de proceso
+st.markdown("""
+<div style="
+    border: 2px solid #2563eb;
+    border-radius: 12px;
+    padding: 18px;
+    background-color: #eff6ff;
+    margin-bottom: 15px;
+">
+    <h3 style="color:#1e3a8a; margin-bottom:5px;">
+        🔀 Tipo de proceso (DECISIÓN CLAVE)
+    </h3>
+    <p style="color:#334155; margin-top:0;">
+        Esta selección define los módulos, campos y cálculos que se habilitarán.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 tipo_opciones = ["PRODUCCIÓN", "LEVANTE"]
 
 if "tipo" in st.session_state and st.session_state.tipo in tipo_opciones:
@@ -483,12 +499,35 @@ else:
     index_tipo = 0
 
 tipo = st.radio(
-    "Tipo de proceso",
+    "",
     tipo_opciones,
     index=index_tipo,
     horizontal=True
 )
-reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
+
+reglas = REGLAS_PRODUCCION if tipo == "PRODUCCIÓN" else REGLAS_LEVANTE
+
+if tipo == "PRODUCCIÓN":
+    st.success(
+        "🏭 **Modo PRODUCCIÓN activo**. "
+        "Se habilitan indicadores de huevos, huevos bomba y cumplimiento productivo."
+    )
+else:
+    st.warning(
+        "🐔 **Modo LEVANTE activo**. "
+        "Se habilitan indicadores por HEMBRAS y MACHOS "
+        "(edad, uniformidad, peso y cumplimiento)."
+    )
+if "tipo_confirmado" not in st.session_state:
+    st.session_state.tipo_confirmado = False
+
+st.session_state.tipo_confirmado = st.checkbox(
+    f"✅ Confirmo que el proceso seleccionado es **{tipo}**"
+)
+
+if not st.session_state.tipo_confirmado:
+    st.info("🔒 Confirme el tipo de proceso para continuar.")
+    st.stop()
 
 # =========================
 # ETAPA Y DATOS PRODUCTIVOS (SOLO PRODUCCIÓN)
@@ -1090,6 +1129,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
