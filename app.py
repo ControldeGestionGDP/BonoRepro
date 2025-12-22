@@ -490,6 +490,92 @@ tipo = st.radio(
 )
 reglas = REGLAS_PRODUCCION if tipo=="PRODUCCIÓN" else REGLAS_LEVANTE
 
+# =========================
+# ETAPA Y DATOS PRODUCTIVOS (SOLO PRODUCCIÓN)
+# =========================
+if tipo == "PRODUCCIÓN":
+
+    st.subheader("🏭 Información productiva – Producción")
+
+    # Etapa productiva
+    etapa = st.radio(
+        "Etapa de Producción",
+        ["Primera etapa", "Segunda etapa"],
+        horizontal=True
+    )
+
+    st.markdown("### 📊 Datos técnicos de validación")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        edad_ave = st.number_input(
+            "Edad del ave evaluada (semanas)",
+            min_value=0,
+            step=1
+        )
+
+        huevos_sem_41 = st.number_input(
+            "N° huevos producidos hasta la sem. 41",
+            min_value=0,
+            step=1
+        )
+
+        poblacion_inicial = st.number_input(
+            "Población Inicial Prod",
+            min_value=0,
+            step=1
+        )
+
+    with col2:
+        huevos_por_aa = st.number_input(
+            "H. Prod / AA",
+            min_value=0.0,
+            step=0.01
+        )
+
+        huevos_std_41 = st.number_input(
+            "Cant. Huevos prod según STD (41 sem)",
+            min_value=0,
+            step=1
+        )
+
+        pct_cumplimiento = st.number_input(
+            "% Cumplimiento Hprod / STD",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f"
+        )
+
+    with col3:
+        pct_huevos_bomba = st.number_input(
+            "% Huevos Bomba",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f"
+        )
+
+        # Campo fijo
+        st.text_input(
+            "Validación",
+            value="CERRADO",
+            disabled=True
+        )
+
+    # Guardar en session_state (para exportar o validar luego)
+    st.session_state.datos_produccion = {
+        "ETAPA": etapa,
+        "EDAD_AVE": edad_ave,
+        "HUEVOS_SEM_41": huevos_sem_41,
+        "POBLACION_INICIAL": poblacion_inicial,
+        "HUEVOS_POR_AA": huevos_por_aa,
+        "HUEVOS_STD_41": huevos_std_41,
+        "PCT_CUMPLIMIENTO": pct_cumplimiento,
+        "PCT_HUEVOS_BOMBA": pct_huevos_bomba,
+        "VALIDACION": "CERRADO"
+    }
 
 # Lotes
 if "lotes" in st.session_state:
