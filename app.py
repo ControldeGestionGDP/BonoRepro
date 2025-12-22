@@ -29,8 +29,9 @@ if not st.session_state.ingresar:
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+with col2:
     if st.button("🚀 Ingresar al sistema", use_container_width=True):
         st.session_state.ingresar = True
         st.session_state.ver_manual = True
@@ -703,5 +704,6 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
