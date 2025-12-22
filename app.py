@@ -18,7 +18,10 @@ if "ingresar" not in st.session_state:
     st.session_state.ingresar = False
 
 if "ver_manual" not in st.session_state:
-    st.session_state.ver_manual = False    
+    st.session_state.ver_manual = False
+
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
 
 if not st.session_state.ingresar:
     st.markdown("""
@@ -30,12 +33,34 @@ if not st.session_state.ingresar:
     """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 2, 1])
-
     with col2:
         if st.button("🚀 Ingresar al sistema", use_container_width=True):
             st.session_state.ingresar = True
-            st.session_state.ver_manual = True
             st.rerun()
+
+    st.stop()
+
+# =========================
+# AUTENTICACIÓN BÁSICA
+# =========================
+if st.session_state.ingresar and not st.session_state.autenticado:
+
+    st.title("🔐 Acceso restringido")
+
+    user = st.text_input("Usuario")
+    pwd = st.text_input("Contraseña", type="password")
+
+    if st.button("Ingresar"):
+        if (
+            user == st.secrets["auth"]["usuario"]
+            and pwd == st.secrets["auth"]["password"]
+        ):
+            st.session_state.autenticado = True
+            st.session_state.ver_manual = True  # 👈 va directo al manual
+            st.success("✅ Acceso autorizado")
+            st.rerun()
+        else:
+            st.error("❌ Credenciales incorrectas")
 
     st.stop()
 
@@ -710,6 +735,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
