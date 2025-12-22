@@ -503,6 +503,11 @@ if st.button("Eliminar trabajador"):
 
 # Editar tabla
 st.subheader("✍️ Registro por trabajador y lote")
+st.info(
+    "📌 **Leyenda de columnas**\n\n"
+    "**P:** Porcentaje de participación del trabajador en el lote.\n\n"
+    "**F:** Faltas injustificadas registradas en el periodo (aplica descuento automático)."
+)
 with st.form("form_edicion"):
     df_edit = st.data_editor(st.session_state.df_edit, use_container_width=True)
     if st.form_submit_button("💾 Actualizar tabla"):
@@ -735,3 +740,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
