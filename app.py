@@ -176,6 +176,28 @@ if st.session_state.ingresar and st.session_state.ver_manual:
     st.stop()
 
 # =========================
+# BARRA LATERAL – POWER BI
+# =========================
+with st.sidebar:
+    st.markdown("## 📊 Validación de Bonos")
+    st.caption("Power BI – Referencia visual")
+
+    if not st.session_state.ver_powerbi:
+        if st.button("📈 Abrir Power BI"):
+            st.session_state.ver_powerbi = True
+            st.rerun()
+    else:
+        if st.button("❌ Cerrar Power BI"):
+            st.session_state.ver_powerbi = False
+            st.rerun()
+
+    st.markdown("---")
+    st.markdown(
+        "🔎 Use este tablero para **validar huevos bomba, "
+        "montos y coherencia con reportes oficiales**."
+    )
+
+# =========================
 # ELECCIÓN DE OPCIÓN DE INICIO
 # =========================
 st.subheader("Seleccione cómo desea iniciar")
@@ -184,20 +206,6 @@ opcion_inicio = st.selectbox(
     ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"]
 )
 
-# =========================
-# ACCESO A POWER BI (HISTÓRICO)
-# =========================
-colA, colB, colC = st.columns([1,2,1])
-
-with colC:
-    if not st.session_state.ver_powerbi:
-        if st.button("📊 Ver Power BI – Histórico Bonos"):
-            st.session_state.ver_powerbi = True
-            st.rerun()
-    else:
-        if st.button("⬅️ Volver al sistema"):
-            st.session_state.ver_powerbi = False
-            st.rerun()
 
 # =========================
 # VISUALIZACIÓN POWER BI
@@ -810,6 +818,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
