@@ -45,22 +45,55 @@ if not st.session_state.ingresar:
 # =========================
 if st.session_state.ingresar and not st.session_state.autenticado:
 
-    st.title("🔐 Acceso restringido")
+    st.markdown("""
+    <style>
+    .login-card {
+        max-width: 420px;
+        margin: auto;
+        margin-top: 80px;
+        padding: 35px;
+        border-radius: 12px;
+        background-color: #ffffff;
+        box-shadow: 0px 8px 25px rgba(0,0,0,0.12);
+        text-align: center;
+    }
+    .login-title {
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    .login-subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 25px;
+    }
+    </style>
 
-    user = st.text_input("Usuario")
-    pwd = st.text_input("Contraseña", type="password")
+    <div class="login-card">
+        <div class="login-title">🔐 Iniciar sesión</div>
+        <div class="login-subtitle">
+            Acceso exclusivo para personal autorizado
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    if st.button("Ingresar"):
-        if (
-            user == st.secrets["auth"]["usuario"]
-            and pwd == st.secrets["auth"]["password"]
-        ):
-            st.session_state.autenticado = True
-            st.session_state.ver_manual = True  # 👈 va directo al manual
-            st.success("✅ Acceso autorizado")
-            st.rerun()
-        else:
-            st.error("❌ Credenciales incorrectas")
+    with st.container():
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            user = st.text_input("👤 Usuario")
+            pwd = st.text_input("🔑 Contraseña", type="password")
+
+            if st.button("➡️ Ingresar", use_container_width=True):
+                if (
+                    user == st.secrets["auth"]["usuario"]
+                    and pwd == st.secrets["auth"]["password"]
+                ):
+                    st.session_state.autenticado = True
+                    st.session_state.ver_manual = True
+                    st.success("✅ Acceso autorizado")
+                    st.rerun()
+                else:
+                    st.error("❌ Usuario o contraseña incorrectos")
 
     st.stop()
 
@@ -740,3 +773,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
