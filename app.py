@@ -135,7 +135,7 @@ if st.session_state.ingresar and st.session_state.ver_manual:
     - **Excel con DNIs:** listado del personal participante  
     - **Base de trabajadores:** maestro general de personal  
 
-    👉 El sistema realiza un **cruce automático (merge)** para validar nombres y cargos.
+    👉 El sistema realiza un **cruce automático** para validar nombres y cargos.
 
     #### 3️⃣ Configuración de Granja y Lotes
     - Seleccione la **Granja**
@@ -146,7 +146,7 @@ if st.session_state.ingresar and st.session_state.ver_manual:
     #### 4️⃣ Configuración Económica y Genética
     Para cada lote:
     - **Genética:** por defecto ROSS
-    - **Monto S/:** monto total asignado (definido con Control de Gestión)
+    - **Monto S/:** monto total asignado (habilitado por Control de Gestión)
 
     #### 5️⃣ Gestión de Personal
     - Agregar o eliminar trabajadores por DNI
@@ -773,4 +773,5 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
