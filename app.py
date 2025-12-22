@@ -692,12 +692,13 @@ if tipo == "LEVANTE":
             "Peso Ave al entregar a Prod STD (Machos)",
             value=2.955,         # ✅ valor por defecto
             step=0.01            # ✅ editable
+            format="%.3f"
         )
 
         pct_cumpl_peso_m = st.number_input(
             "% CUMP. PESO (Machos)",
             step=0.1,            # (si luego quieres negativos aquí también, ya está listo)
-            format="%.3f"
+            format="%.2f"
         )
 
     # =========================
@@ -1087,6 +1088,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
