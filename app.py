@@ -395,6 +395,10 @@ if st.button("Eliminar trabajador"):
     st.session_state.df_edit = st.session_state.tabla.copy()
     st.success("✅ Trabajador eliminado")
 
+# Control de visualización de resultados
+if "mostrar_resultados" not in st.session_state:
+    st.session_state.mostrar_resultados = False
+
 # Editar tabla
 st.subheader("✍️ Registro por trabajador y lote")
 with st.form("form_edicion"):
@@ -402,31 +406,57 @@ with st.form("form_edicion"):
     if st.form_submit_button("💾 Actualizar tabla"):
         st.session_state.tabla = df_edit.copy()
         st.session_state.df_edit = df_edit.copy()
+
+        # 🔑 mostrar resultados a partir de aquí
+        st.session_state.mostrar_resultados = True
+
         st.success("✅ Tabla actualizada")
 
-# Cálculo final
-df_final = st.session_state.tabla.copy()
-pagos = []
-for lote in lotes:
-    col = f"PAGO_{lote}"
-    df_final[col] = df_final.apply(lambda r: round(
-        reglas.get(str(r["CARGO"]).upper(),0) * config_lotes[lote]["MONTO"] * (float(r[f"P_{lote}"])/100) * factor_faltas(r[f"F_{lote}"]),
-        2
-    ), axis=1)
-    pagos.append(col)
+if st.session_state.mostrar_resultados:
 
-df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
+    # =========================
+    # Cálculo final
+    # =========================
+    df_final = st.session_state.tabla.copy()
+    pagos = []
+    for lote in lotes:
+        col = f"PAGO_{lote}"
+        df_final[col] = df_final.apply(lambda r: round(
+            reglas.get(str(r["CARGO"]).upper(),0)
+            * config_lotes[lote]["MONTO"]
+            * (float(r[f"P_{lote}"])/100)
+            * factor_faltas(r[f"F_{lote}"]),
+            2
+        ), axis=1)
+        pagos.append(col)
 
-# Resultado final
-st.subheader("💰 Resultado final")
-st.dataframe(df_final, use_container_width=True)
+    df_final["TOTAL S/"] = df_final[pagos].sum(axis=1)
 
-# Gráfico
-st.subheader("📊 Distribución de bonos por trabajador")
-fig = px.bar(df_final, x="NOMBRE COMPLETO", y="TOTAL S/", text="TOTAL S/", title="Bono total por trabajador")
-fig.update_traces(texttemplate="S/ %{text:,.2f}", textposition="outside", cliponaxis=False)
-fig.update_layout(xaxis_tickangle=-45, height=550, margin=dict(t=100), yaxis=dict(rangemode="tozero"))
-st.plotly_chart(fig, use_container_width=True)
+    # 💰 Resultado final
+    st.subheader("💰 Resultado final")
+    st.dataframe(df_final, use_container_width=True)
+
+    # 📊 Gráfico
+    st.subheader("📊 Distribución de bonos por trabajador")
+    fig = px.bar(
+        df_final,
+        x="NOMBRE COMPLETO",
+        y="TOTAL S/",
+        text="TOTAL S/",
+        title="Bono total por trabajador"
+    )
+    fig.update_traces(
+        texttemplate="S/ %{text:,.2f}",
+        textposition="outside",
+        cliponaxis=False
+    )
+    fig.update_layout(
+        xaxis_tickangle=-45,
+        height=550,
+        margin=dict(t=100),
+        yaxis=dict(rangemode="tozero")
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 # Exportar
 output = BytesIO()
@@ -629,5 +659,6 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
