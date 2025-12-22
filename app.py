@@ -697,7 +697,7 @@ if tipo == "LEVANTE":
         pct_cumpl_peso_m = st.number_input(
             "% CUMP. PESO (Machos)",
             step=0.1,            # (si luego quieres negativos aquí también, ya está listo)
-            format="%.2f"
+            format="%.3f"
         )
 
     # =========================
@@ -1087,6 +1087,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
