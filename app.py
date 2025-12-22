@@ -577,6 +577,158 @@ if tipo == "PRODUCCIÓN":
         "VALIDACION": "CERRADO"
     }
 
+# =========================
+# DATOS PRODUCTIVOS – LEVANTE
+# =========================
+if tipo == "LEVANTE":
+
+    st.subheader("🐔 Información productiva – Levante")
+
+    # =========================
+    # HEMBRAS
+    # =========================
+    st.markdown("### ♀️ Hembras")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        edad_hembra = st.number_input(
+            "Edad ave al entregar a Prod (Hembras)",
+            min_value=0,
+            step=1
+        )
+
+        uniformidad_hembras = st.number_input(
+            "Uniformidad Hembras (%)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f"
+        )
+
+        nro_aves_entregadas_h = st.number_input(
+            "Nro Aves Entregadas a Prod (Hembras)",
+            min_value=0,
+            step=1
+        )
+
+    with col2:
+        poblacion_inicial_h = st.number_input(
+            "Población Inicial (Hembras)",
+            min_value=0,
+            step=1
+        )
+
+        pct_cumpl_aves_h = st.number_input(
+            "% CUMP. Aves Entregadas (Hembras)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f"
+        )
+
+    with col3:
+        peso_entrega_h = st.number_input(
+            "Peso Ave al entregar a Prod (Hembras)",
+            min_value=0.0,
+            step=0.01
+        )
+
+        peso_std_h = st.number_input(
+            "Peso Ave al entregar a Prod STD (Hembras)",
+            min_value=0.0,
+            step=0.01
+        )
+
+        pct_cumpl_peso_h = st.number_input(
+            "% CUMP. PESO (Hembras)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f"
+        )
+
+    # =========================
+    # MACHOS
+    # =========================
+    st.markdown("### ♂️ Machos")
+
+    col4, col5, col6 = st.columns(3)
+
+    with col4:
+        edad_macho = st.number_input(
+            "Edad ave al entregar a Prod (Machos)",
+            min_value=0,
+            step=1
+        )
+
+        uniformidad_machos = st.number_input(
+            "Uniformidad Machos (%)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f"
+        )
+
+        nro_aves_entregadas_m = st.number_input(
+            "Nro Aves Entregadas a Prod (Machos)",
+            min_value=0,
+            step=1
+        )
+
+    with col5:
+        poblacion_inicial_m = st.number_input(
+            "Población Inicial (Machos)",
+            min_value=0,
+            step=1
+        )
+
+    with col6:
+        peso_entrega_m = st.number_input(
+            "Peso Ave al entregar a Prod (Machos)",
+            min_value=0.0,
+            step=0.01
+        )
+
+        peso_std_m = st.number_input(
+            "Peso Ave al entregar a Prod STD (Machos)",
+            min_value=0.0,
+            step=0.01
+        )
+
+        pct_cumpl_peso_m = st.number_input(
+            "% CUMP. PESO (Machos)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.1,
+            format="%.2f"
+        )
+
+    # =========================
+    # GUARDAR EN SESSION_STATE
+    # =========================
+    st.session_state.datos_levante = {
+        "HEMBRAS": {
+            "EDAD": edad_hembra,
+            "UNIFORMIDAD": uniformidad_hembras,
+            "AVES_ENTREGADAS": nro_aves_entregadas_h,
+            "POBLACION_INICIAL": poblacion_inicial_h,
+            "PCT_CUMP_AVES": pct_cumpl_aves_h,
+            "PESO": peso_entrega_h,
+            "PESO_STD": peso_std_h,
+            "PCT_CUMP_PESO": pct_cumpl_peso_h
+        },
+        "MACHOS": {
+            "EDAD": edad_macho,
+            "UNIFORMIDAD": uniformidad_machos,
+            "AVES_ENTREGADAS": nro_aves_entregadas_m,
+            "POBLACION_INICIAL": poblacion_inicial_m,
+            "PESO": peso_entrega_m,
+            "PESO_STD": peso_std_m,
+            "PCT_CUMP_PESO": pct_cumpl_peso_m
+        }
+    }
+
 # Lotes
 if "lotes" in st.session_state:
     lotes = st.session_state.lotes
@@ -939,6 +1091,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
