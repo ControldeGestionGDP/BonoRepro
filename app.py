@@ -44,18 +44,20 @@ if not st.session_state.ingresar:
 # =========================
 if st.session_state.ingresar and st.session_state.ver_manual:
 
-    st.markdown("""
-    ## 📘 Manual de Uso – Bono Reproductoras GDP
+    st.markdown("## 📘 Manual de Uso – Bono Reproductoras GDP")
 
+    # 🔴 REQUISITO PREVIO OBLIGATORIO
     st.warning(
-    "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
-    "**Antes de iniciar en el sistema:**\n"
-    "Al cerrar una granja, comuníquese con el equipo de **Control de Gestión**.\n\n"
-    "**Ellos deben realizar previamente:**\n"
-    "• El ingreso de los **Huevos Bomba**\n"
-    "• La definición de los **montos base por granja y lote**\n\n"
-    "Solo después de este paso se debe proceder con el cálculo individual."
-)
+        "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
+        "**Antes de iniciar en el sistema:**\n"
+        "Al cerrar una granja, comuníquese con el equipo de **Control de Gestión**.\n\n"
+        "**Ellos deben realizar previamente:**\n"
+        "• El ingreso de los **Huevos Bomba**\n"
+        "• La definición de los **montos base por granja y lote**\n\n"
+        "Solo después de este paso se debe proceder con el cálculo individual."
+    )
+
+    st.markdown("""
     ---
 
     ### 🚀 Guía de Uso del Sistema
@@ -101,11 +103,10 @@ if st.session_state.ingresar and st.session_state.ver_manual:
     - Gráficos de distribución
     - Descarga de Excel con formato oficial
     - Envío automático por correo corporativo
-
     ---
     """)
 
-    col1, col2, col3 = st.columns([1,2,1])
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("✅ Entendido, continuar al sistema", use_container_width=True):
             st.session_state.ver_manual = False
@@ -709,6 +710,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
