@@ -17,6 +17,9 @@ st.set_page_config(
 if "ingresar" not in st.session_state:
     st.session_state.ingresar = False
 
+if "ver_manual" not in st.session_state:
+    st.session_state.ver_manual = False    
+
 if not st.session_state.ingresar:
     st.markdown("""
         <div style='text-align:center; padding-top:100px'>
@@ -29,8 +32,79 @@ if not st.session_state.ingresar:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         if st.button("🚀 Ingresar al sistema", use_container_width=True):
-            st.session_state.ingresar = True
+    st.session_state.ingresar = True
+    st.session_state.ver_manual = True
+    st.rerun()
+    
+    st.stop()
+# =========================
+# MANUAL DE INSTRUCCIONES
+# =========================
+if st.session_state.ingresar and st.session_state.ver_manual:
+
+    st.markdown("""
+    ## 📘 Manual de Uso – Bono Reproductoras GDP
+
+    ### 📋 Requisito Previo Importante
+    > ⚠️ **Antes de iniciar en el sistema:**  
+    > Al cerrar una granja, comuníquese con el equipo de **Control de Gestión**.  
+    > Ellos deben realizar el ingreso previo de los **Huevos Bomba** y definir los **montos base por granja y lote** en el sistema central antes de continuar con el cálculo individual.
+
+    ---
+
+    ### 🚀 Guía de Uso del Sistema
+
+    #### 1️⃣ Acceso e Inicio
+    Al ingresar a la aplicación encontrará dos opciones:
+
+    - **➕ Iniciar desde cero**  
+      Use esta opción si es la primera vez que procesa el bono del periodo.
+
+    - **📂 Cargar Excel previamente generado**  
+      Ideal para continuar un trabajo guardado o corregir un archivo descargado.
+
+    #### 2️⃣ Carga de Datos (inicio desde cero)
+    Deberá subir dos archivos Excel obligatorios:
+
+    - **Excel con DNIs:** listado del personal participante  
+    - **Base de trabajadores:** maestro general de personal  
+
+    👉 El sistema realiza un **cruce automático (merge)** para validar nombres y cargos.
+
+    #### 3️⃣ Configuración de Granja y Lotes
+    - Seleccione la **Granja**
+    - Defina el **Tipo de Proceso** (PRODUCCIÓN o LEVANTE)
+    - Ingrese los **Lotes** (ejemplo: 211-212-213)
+    - Confirme los datos para desbloquear el sistema
+
+    #### 4️⃣ Configuración Económica y Genética
+    Para cada lote:
+    - **Genética:** por defecto ROSS
+    - **Monto S/:** monto total asignado (definido con Control de Gestión)
+
+    #### 5️⃣ Gestión de Personal
+    - Agregar o eliminar trabajadores por DNI
+    - Registrar:
+        - **P_[Lote]:** porcentaje de participación
+        - **F_[Lote]:** faltas (con descuento automático)
+
+    💡 **Importante:** siempre presione **💾 Actualizar tabla** luego de editar.
+
+    #### 6️⃣ Resultados y Exportación
+    - Tabla final de pagos
+    - Gráficos de distribución
+    - Descarga de Excel con formato oficial
+    - Envío automático por correo corporativo
+
+    ---
+    """)
+
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        if st.button("✅ Entendido, continuar al sistema", use_container_width=True):
+            st.session_state.ver_manual = False
             st.rerun()
+
     st.stop()
 
 # =========================
@@ -629,3 +703,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
