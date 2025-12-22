@@ -624,9 +624,3 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
-
-
-
-
-
-
