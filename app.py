@@ -411,13 +411,13 @@ for i, lote in enumerate(lotes):
         valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 1000.0))
 
         genetica = st.text_input(
-            f"Genética {lote}",
+            f"Genética - Lote {lote}",
             value=valor_gen,
             key=f"gen_{lote}"
         )
 
         monto = st.number_input(
-            f"Monto S/ {lote}",
+            f"Monto S/ - Lote {lote}",
             min_value=0.0,
             value=valor_monto,
             step=50.0,
@@ -735,6 +735,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
