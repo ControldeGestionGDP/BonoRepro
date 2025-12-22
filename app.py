@@ -244,15 +244,16 @@ if opcion_granja == "➕ Agregar":
         st.rerun()
 else:
     st.session_state.granja_seleccionada = opcion_granja
+
     if opcion_granja not in st.session_state.granjas_base:
-    if st.button("🗑️ Eliminar granja", key="btn_eliminar_granja"):
-        st.session_state.granjas.remove(opcion_granja)
+        if st.button("🗑️ Eliminar granja", key="btn_eliminar_granja"):
+            st.session_state.granjas.remove(opcion_granja)
 
-        # 🔑 limpiar selección actual
-        st.session_state.granja_seleccionada = st.session_state.granjas_base[0]
+            # 🔑 limpiar selección actual
+            st.session_state.granja_seleccionada = st.session_state.granjas_base[0]
 
-        st.success(f"✅ Granja '{opcion_granja}' eliminada correctamente")
-        st.rerun()
+            st.success(f"✅ Granja '{opcion_granja}' eliminada correctamente")
+            st.rerun()
 
 # Tipo de proceso
 tipo_opciones = ["PRODUCCIÓN", "LEVANTE"]
@@ -628,4 +629,5 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
