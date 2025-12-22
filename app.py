@@ -23,6 +23,9 @@ if "ver_manual" not in st.session_state:
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
+if "ver_powerbi" not in st.session_state:
+    st.session_state.ver_powerbi = False
+
 if not st.session_state.ingresar:
     st.markdown("""
         <div style='text-align:center; padding-top:100px'>
@@ -180,6 +183,40 @@ opcion_inicio = st.selectbox(
     "Opciones",
     ["➕ Iniciar desde cero", "📂 Cargar Excel previamente generado"]
 )
+
+# =========================
+# ACCESO A POWER BI (HISTÓRICO)
+# =========================
+colA, colB, colC = st.columns([1,2,1])
+
+with colC:
+    if not st.session_state.ver_powerbi:
+        if st.button("📊 Ver Power BI – Histórico Bonos"):
+            st.session_state.ver_powerbi = True
+            st.rerun()
+    else:
+        if st.button("⬅️ Volver al sistema"):
+            st.session_state.ver_powerbi = False
+            st.rerun()
+
+# =========================
+# VISUALIZACIÓN POWER BI
+# =========================
+if st.session_state.ver_powerbi:
+
+    st.markdown("## 📊 Power BI – Histórico de Bonos")
+    st.info(
+        "📌 Este tablero es una referencia visual oficial. "
+        "Los cálculos y validaciones se realizan en el sistema."
+    )
+
+    st.components.v1.iframe(
+        src="https://app.powerbi.com/reportEmbed?reportId=07ff7776-f12c-4192-be31-08cc522358d1&autoAuth=true&ctid=42fc96b3-c018-482d-8ada-cab81720489e",
+        height=650,
+        scrolling=True
+    )
+
+    st.stop()
 
 # =========================
 # TABLAS DE % POR CARGO
@@ -773,5 +810,6 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
