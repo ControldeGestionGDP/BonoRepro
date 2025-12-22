@@ -636,15 +636,13 @@ if tipo == "LEVANTE":
 
         peso_std_h = st.number_input(
             "Peso Ave al entregar a Prod STD (Hembras)",
-            min_value=0.0,
-            step=0.01
+            value=2.53,          # ✅ valor por defecto
+            step=0.01            # ✅ editable
         )
 
         pct_cumpl_peso_h = st.number_input(
             "% CUMP. PESO (Hembras)",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
+            step=0.1,            # ✅ permite negativos
             format="%.2f"
         )
 
@@ -692,15 +690,13 @@ if tipo == "LEVANTE":
 
         peso_std_m = st.number_input(
             "Peso Ave al entregar a Prod STD (Machos)",
-            min_value=0.0,
-            step=0.01
+            value=2.955,         # ✅ valor por defecto
+            step=0.01            # ✅ editable
         )
 
         pct_cumpl_peso_m = st.number_input(
             "% CUMP. PESO (Machos)",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
+            step=0.1,            # (si luego quieres negativos aquí también, ya está listo)
             format="%.2f"
         )
 
@@ -1091,6 +1087,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
