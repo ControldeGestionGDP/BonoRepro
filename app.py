@@ -47,11 +47,15 @@ if st.session_state.ingresar and st.session_state.ver_manual:
     st.markdown("""
     ## 📘 Manual de Uso – Bono Reproductoras GDP
 
-    ### 📋 Requisito Previo Importante
-    > ⚠️ **Antes de iniciar en el sistema:**  
-    > Al cerrar una granja, comuníquese con el equipo de **Control de Gestión**.  
-    > Ellos deben realizar el ingreso previo de los **Huevos Bomba** y definir los **montos base por granja y lote** en el sistema central antes de continuar con el cálculo individual.
-
+    st.warning(
+    "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
+    "**Antes de iniciar en el sistema:**\n"
+    "Al cerrar una granja, comuníquese con el equipo de **Control de Gestión**.\n\n"
+    "**Ellos deben realizar previamente:**\n"
+    "• El ingreso de los **Huevos Bomba**\n"
+    "• La definición de los **montos base por granja y lote**\n\n"
+    "Solo después de este paso se debe proceder con el cálculo individual."
+)
     ---
 
     ### 🚀 Guía de Uso del Sistema
@@ -705,6 +709,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
