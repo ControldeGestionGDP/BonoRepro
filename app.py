@@ -26,6 +26,10 @@ if "autenticado" not in st.session_state:
 if "ver_powerbi" not in st.session_state:
     st.session_state.ver_powerbi = False
 
+# 🔑 ROL DEL USUARIO (MUY IMPORTANTE)
+if "rol" not in st.session_state:
+    st.session_state.rol = None
+
 if not st.session_state.ingresar:
     st.markdown("""
         <div style='text-align:center; padding-top:100px'>
@@ -42,6 +46,7 @@ if not st.session_state.ingresar:
             st.rerun()
 
     st.stop()
+
 
 # =========================
 # AUTENTICACIÓN BÁSICA
@@ -87,11 +92,27 @@ if st.session_state.ingresar and not st.session_state.autenticado:
             pwd = st.text_input("🔑 Contraseña", type="password")
 
             if st.button("➡️ Ingresar", use_container_width=True):
+
+                rol_usuario = None
+
+                # ---- CONTROL DE GESTIÓN ----
                 if (
+                    user == st.secrets["control"]["usuario"]
+                    and pwd == st.secrets["control"]["password"]
+                ):
+                    rol_usuario = st.secrets["control"]["rol"]
+
+                # ---- USUARIO NORMAL ----
+                elif (
                     user == st.secrets["auth"]["usuario"]
                     and pwd == st.secrets["auth"]["password"]
                 ):
+                    rol_usuario = st.secrets["auth"]["rol"]
+
+                # ---- VALIDACIÓN FINAL ----
+                if rol_usuario:
                     st.session_state.autenticado = True
+                    st.session_state.rol = rol_usuario
                     st.session_state.ver_manual = True
                     st.success("✅ Acceso autorizado")
                     st.rerun()
@@ -99,6 +120,7 @@ if st.session_state.ingresar and not st.session_state.autenticado:
                     st.error("❌ Usuario o contraseña incorrectos")
 
     st.stop()
+
 
 # =========================
 # MANUAL DE INSTRUCCIONES
@@ -179,23 +201,36 @@ if st.session_state.ingresar and st.session_state.ver_manual:
 # BARRA LATERAL – POWER BI
 # =========================
 with st.sidebar:
+
     st.markdown("## 📊 Validación de Bonos")
-    st.caption("Power BI – Referencia visual")
 
-    if not st.session_state.ver_powerbi:
-        if st.button("📈 Abrir Power BI"):
-            st.session_state.ver_powerbi = True
-            st.rerun()
+    # 🔐 SOLO CONTROL DE GESTIÓN
+    if st.session_state.get("rol") == "control":
+
+        st.caption("Acceso exclusivo – Control de Gestión")
+
+        if not st.session_state.ver_powerbi:
+            if st.button("📈 Abrir Power BI", use_container_width=True):
+                st.session_state.ver_powerbi = True
+                st.rerun()
+        else:
+            if st.button("❌ Cerrar Power BI", use_container_width=True):
+                st.session_state.ver_powerbi = False
+                st.rerun()
+
+        st.markdown("---")
+        st.markdown(
+            "🔎 Use este tablero para **validar huevos bomba, "
+            "montos y coherencia con reportes oficiales**."
+        )
+
+    # 👤 USUARIOS NORMALES
     else:
-        if st.button("❌ Cerrar Power BI"):
-            st.session_state.ver_powerbi = False
-            st.rerun()
+        st.info(
+            "🔒 El tablero Power BI es de uso exclusivo "
+            "del equipo de Control de Gestión."
+        )
 
-    st.markdown("---")
-    st.markdown(
-        "🔎 Use este tablero para **validar huevos bomba, "
-        "montos y coherencia con reportes oficiales**."
-    )
 
 # =========================
 # ELECCIÓN DE OPCIÓN DE INICIO
@@ -818,6 +853,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
