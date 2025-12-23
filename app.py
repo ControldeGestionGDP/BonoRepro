@@ -137,10 +137,10 @@ if st.session_state.ingresar and st.session_state.ver_manual:
         "**Paso obligatorio:**\n"
         "• Completar todos los campos del sistema y **enviar la información al equipo CDG para su validación**.\n"
         "• CDG validará los datos productivos (Huevos Bomba, % de Cumplimiento, entre otros indicadores).\n\n"
+        "• Asimismo, se valida la **definición de los montos base por granja y por lote**.\n\n"
         "**Correo de validación:**\n"
         "📧 humbertoatoche@donpollo.pe\n"
         "📧 galapi@donpollo.pe\n\n"
-        "• Asimismo, se valida la **definición de los montos base por granja y por lote**.\n\n"
         "El sistema asume que esta información ya fue revisada y validada oficialmente por CDG."
     )
 
@@ -1478,6 +1478,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
