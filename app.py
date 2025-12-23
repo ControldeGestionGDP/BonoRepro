@@ -393,6 +393,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
     )
 
     if archivo_prev:
+        # Leer todo el Excel sin encabezados
         raw = pd.read_excel(
             archivo_prev,
             sheet_name="BONO_REPRODUCTORAS",
@@ -402,9 +403,9 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         # =========================
         # 1️⃣ ENCABEZADO
         # =========================
-        encabezado = raw.iloc[0:4, 0:2]
+        encabezado = raw.iloc[0:4, 0:2].copy()
         encabezado.columns = ["CAMPO", "VALOR"]
-        encabezado["CAMPO"] = encabezado["CAMPO"].str.upper()
+        encabezado["CAMPO"] = encabezado["CAMPO"].str.upper().str.strip()
 
         st.session_state.granja_seleccionada = encabezado.loc[
             encabezado["CAMPO"] == "GRANJA", "VALOR"
@@ -412,7 +413,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
         tipo = encabezado.loc[
             encabezado["CAMPO"] == "TIPO DE PROCESO", "VALOR"
-        ].values[0]
+        ].values[0].strip().upper()
 
         lotes_txt = encabezado.loc[
             encabezado["CAMPO"] == "LOTES", "VALOR"
@@ -437,7 +438,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         config_lotes = {}
         for _, r in df_lotes.iterrows():
             if pd.isna(r["Lote"]):
-                continue
+                break
 
             try:
                 monto = float(str(r["Monto S/"]).replace(",", "").strip())
@@ -452,7 +453,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         st.session_state.config_lotes = config_lotes
 
         # =========================
-        # 3️⃣ TABLA DE TRABAJADORES (UNA SOLA VEZ)
+        # 3️⃣ TABLA DE TRABAJADORES
         # =========================
         fila_tabla = raw[raw.iloc[:, 0] == "DNI"].index[0]
 
@@ -466,24 +467,24 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         df.columns = df.columns.str.strip().str.upper()
         df["DNI"] = (
             df["DNI"]
-            .str.replace("'", "")
+            .str.replace("'", "", regex=False)
             .str.replace(".0", "", regex=False)
             .str.zfill(8)
         )
 
         st.session_state.tabla = df.copy()
         st.session_state.df_edit = df.copy()
-        df_base = df.copy()  # 🔑 base para agregar trabajadores
+        df_base = df.copy()  # base para agregar trabajadores
 
         # =========================
         # 4️⃣ DATOS PRODUCTIVOS
         # =========================
         st.session_state.datos_productivos = {}
 
+        # ---- PRODUCCIÓN ----
         if tipo == "PRODUCCIÓN":
 
             df_prod = leer_bloque_invertido(
-                raw,
                 archivo_prev,
                 fila_inicio=fila_lotes + len(df_lotes) + 2,
                 fila_fin=fila_tabla
@@ -502,19 +503,20 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                     "VALIDACION": "CERRADO"
                 }
 
-        else:  # LEVANTE
+        # ---- LEVANTE ----
+        else:
+
+            inicio_h = fila_lotes + len(df_lotes) + 2
 
             df_h = leer_bloque_invertido(
-                raw,
                 archivo_prev,
-                fila_inicio=fila_lotes + len(df_lotes) + 2,
-                fila_fin=fila_tabla
+                fila_inicio=inicio_h,
+                fila_fin=inicio_h + 12
             )
 
             df_m = leer_bloque_invertido(
-                raw,
                 archivo_prev,
-                fila_inicio=fila_lotes + len(df_lotes) + 2 + len(df_h) + 2,
+                fila_inicio=inicio_h + len(df_h) + 2,
                 fila_fin=fila_tabla
             )
 
@@ -1582,5 +1584,6 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
