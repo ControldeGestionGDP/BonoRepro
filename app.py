@@ -528,7 +528,20 @@ st.session_state.tipo_confirmado = st.checkbox(
 if not st.session_state.tipo_confirmado:
     st.info("🔒 Confirme el tipo de proceso para continuar.")
     st.stop()
-    
+
+# Lotes
+if "lotes" in st.session_state:
+    lotes = st.session_state.lotes
+    st.text_input("Lotes", ", ".join(lotes), disabled=True)
+else:
+    lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
+    lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
+
+# Confirmación de datos iniciales
+confirmar_inicio = st.checkbox(
+     "✅ Confirmo que Granja, Tipo de proceso y Lotes son correctos"
+)
+
 if "datos_productivos" not in st.session_state:
     st.session_state.datos_productivos = {}
 
@@ -816,18 +829,6 @@ if tipo == "LEVANTE":
         }
 
 
-# Lotes
-if "lotes" in st.session_state:
-    lotes = st.session_state.lotes
-    st.text_input("Lotes", ", ".join(lotes), disabled=True)
-else:
-    lotes_txt = st.text_input("Lotes (ej: 211-212-213)", "211-212-213")
-    lotes = [l.strip() for l in lotes_txt.split("-") if l.strip()]
-
-# Confirmación de datos iniciales
-confirmar_inicio = st.checkbox(
-     "✅ Confirmo que Granja, Tipo de proceso y Lotes son correctos"
-)
 
 # Configuración por lote
 if not confirmar_inicio:
@@ -1178,6 +1179,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
