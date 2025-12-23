@@ -1110,22 +1110,26 @@ with tab2:
                 msg["Subject"] = asunto
 
                 # =========================
-                # TABLAS HTML
+                # TABLAS RESUMEN
                 # =========================
                 tabla_lote_html = resumen_lote.to_html(
                     index=False,
-                    border=1,
-                    justify="center"
+                    border=1
+                ).replace(
+                    "<table",
+                    "<table style='border-collapse:collapse; text-align:left;'"
                 )
 
                 tabla_resultado_html = df_final.to_html(
                     index=False,
-                    border=1,
-                    justify="center"
+                    border=1
+                ).replace(
+                    "<table",
+                    "<table style='border-collapse:collapse; text-align:left;'"
                 )
 
                 # =========================
-                # DATOS PRODUCTIVOS HTML
+                # DATOS PRODUCTIVOS
                 # =========================
                 if tipo == "PRODUCCIÓN":
 
@@ -1144,7 +1148,7 @@ with tab2:
                         campo: [
                             st.session_state.datos_productivos
                             .get(lote, {})
-                            .get(key, "")
+                            .get(key, 0)
                             for lote in lotes
                         ]
                         for campo, key in campos_prod.items()
@@ -1152,9 +1156,18 @@ with tab2:
 
                     df_prod_mail = pd.DataFrame(data_prod, index=lotes).T
 
+                    tabla_prod_html = tabla_html_limpia(
+                        df_prod_mail,
+                        decimales_por_fila={
+                            "Huevos / AA": 2,
+                            "% Cumplimiento": 2,
+                            "% Huevos bomba": 2
+                        }
+                    )
+
                     bloque_productivo_html = f"""
                     <h3>🏭 Datos productivos – Producción</h3>
-                    {df_prod_mail.to_html(index=True, border=1, justify="center")}
+                    {tabla_prod_html}
                     """
 
                 else:
@@ -1175,13 +1188,23 @@ with tab2:
                             st.session_state.datos_productivos
                             .get(lote, {})
                             .get("HEMBRAS", {})
-                            .get(key, "")
+                            .get(key, 0)
                             for lote in lotes
                         ]
                         for campo, key in campos_h.items()
                     }
 
                     df_h_mail = pd.DataFrame(data_h, index=lotes).T
+
+                    tabla_h_html = tabla_html_limpia(
+                        df_h_mail,
+                        decimales_por_fila={
+                            "Uniformidad (%)": 2,
+                            "% Cumpl. aves": 2,
+                            "% Cumpl. peso": 2,
+                            "Peso STD": 2
+                        }
+                    )
 
                     # ---------- MACHOS ----------
                     campos_m = {
@@ -1199,7 +1222,7 @@ with tab2:
                             st.session_state.datos_productivos
                             .get(lote, {})
                             .get("MACHOS", {})
-                            .get(key, "")
+                            .get(key, 0)
                             for lote in lotes
                         ]
                         for campo, key in campos_m.items()
@@ -1207,12 +1230,21 @@ with tab2:
 
                     df_m_mail = pd.DataFrame(data_m, index=lotes).T
 
+                    tabla_m_html = tabla_html_limpia(
+                        df_m_mail,
+                        decimales_por_fila={
+                            "Uniformidad (%)": 2,
+                            "% Cumpl. peso": 2,
+                            "Peso STD": 3
+                        }
+                    )
+
                     bloque_productivo_html = f"""
                     <h3>🐔 Datos productivos – Levante (Hembras)</h3>
-                    {df_h_mail.to_html(index=True, border=1, justify="center")}
+                    {tabla_h_html}
 
                     <h3>🐔 Datos productivos – Levante (Machos)</h3>
-                    {df_m_mail.to_html(index=True, border=1, justify="center")}
+                    {tabla_m_html}
                     """
 
                 # =========================
@@ -1263,5 +1295,6 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
