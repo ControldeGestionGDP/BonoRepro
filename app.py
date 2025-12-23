@@ -11,22 +11,15 @@ def leer_bloque_invertido(archivo, fila_inicio, fila_fin):
         header=None
     )
 
-    # --- Validación básica de rango ---
     if fila_fin <= fila_inicio:
         raise ValueError(
             f"Rango inválido: fila_inicio={fila_inicio}, fila_fin={fila_fin}"
         )
 
-    # --- Extraer bloque ---
     bloque = df.iloc[fila_inicio:fila_fin].copy()
-
-    # Eliminar filas totalmente vacías
     bloque = bloque.dropna(how="all")
-
-    # Resetear índice para evitar errores con iloc
     bloque = bloque.reset_index(drop=True)
 
-    # Debe haber al menos encabezado + 1 fila
     if bloque.shape[0] < 2:
         raise ValueError(
             f"No se encontró información productiva válida entre filas "
@@ -34,22 +27,20 @@ def leer_bloque_invertido(archivo, fila_inicio, fila_fin):
             f"Filas útiles detectadas: {bloque.shape[0]}"
         )
 
-    # --- Primera fila = encabezados (lotes) ---
+    # Encabezados
     header = bloque.iloc[0].astype(str).str.strip()
     bloque = bloque.iloc[1:].copy()
+    bloque.columns = header
 
-    # Validar que existan datos luego del header
     if bloque.empty:
         raise ValueError(
             "El bloque productivo no contiene filas de datos después del encabezado."
         )
 
-    bloque.columns = header
-
-    # --- Primera columna = nombre del campo ---
-    bloque = bloque.rename(columns={bloque.columns[0]: "CAMPO"})
-    bloque["CAMPO"] = bloque["CAMPO"].astype(str).str.strip()
-    bloque = bloque.set_index("CAMPO")
+    # 🔒 PRIMERA COLUMNA COMO CAMPO (SEGURO)
+    bloque.iloc[:, 0] = bloque.iloc[:, 0].astype(str).str.strip()
+    bloque = bloque.set_index(bloque.columns[0])
+    bloque.index.name = "CAMPO"
 
     return bloque
 
@@ -1647,6 +1638,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
