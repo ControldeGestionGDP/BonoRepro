@@ -345,20 +345,18 @@ def factor_faltas(f):
 def leer_bloque_invertido(raw, fila_inicio, fila_fin):
     bloque = raw.iloc[fila_inicio:fila_fin].copy()
 
-    # Primera fila = encabezados (lotes)
-    header = bloque.iloc[0].astype(str).str.strip()
-
-    # Datos reales
+    header = bloque.iloc[0].astype(str)
     bloque = bloque.iloc[1:]
     bloque.columns = ["CAMPO"] + list(header[1:])
 
-    # 🔑 NORMALIZACIÓN CRÍTICA
     bloque["CAMPO"] = (
         bloque["CAMPO"]
         .astype(str)
+        .str.replace("\xa0", " ", regex=False)
+        .str.replace("\n", " ", regex=False)
+        .str.replace("\r", " ", regex=False)
         .str.strip()
         .str.upper()
-        .str.replace("\xa0", " ", regex=False)
     )
 
     bloque = bloque.set_index("CAMPO")
@@ -375,7 +373,7 @@ df_base = None
 if opcion_inicio == "➕ Iniciar desde cero":
     archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
     archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
-    
+
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
         df_base = pd.read_excel(archivo_base, dtype=str)
@@ -413,7 +411,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
     if archivo_prev:
 
         # =========================
-        # LECTURA RAW DEL EXCEL
+        # LECTURA RAW
         # =========================
         raw = pd.read_excel(
             archivo_prev,
@@ -469,7 +467,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
             }
 
         # =========================
-        # 3️⃣ TABLA DE TRABAJADORES
+        # 3️⃣ TABLA TRABAJADORES
         # =========================
         fila_tabla = raw[raw.iloc[:, 0] == "DNI"].index[0]
 
@@ -489,49 +487,61 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         )
 
         # =========================
-        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE
+        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE (ROBUSTO)
         # =========================
         if tipo == "LEVANTE":
 
             st.session_state.datos_productivos = {}
 
-            # ---- HEMBRAS ----
             inicio_h = raw[raw.iloc[:, 0] == "Edad"].index[0]
             df_h = leer_bloque_invertido(raw, inicio_h, inicio_h + 8)
 
-            # ---- MACHOS ----
             inicio_m = inicio_h + 9
             df_m = leer_bloque_invertido(raw, inicio_m, inicio_m + 7)
 
-            for lote in df_h.columns:
+            MAP_H = {
+                "EDAD": "EDAD",
+                "UNIFORMIDAD": "UNIFORMIDAD",
+                "AVES_ENTREGADAS": "AVES",
+                "POBLACION_INICIAL": "POBLACIÓN",
+                "PCT_CUMP_AVES": "CUMPL",
+                "PESO": "PESO",
+                "PESO_STD": "STD",
+                "PCT_CUMP_PESO": "CUMPL",
+            }
 
+            for lote in df_h.columns:
                 st.session_state.datos_productivos.setdefault(lote, {})
 
-                # ♀️ HEMBRAS
                 st.session_state.datos_productivos[lote]["HEMBRAS"] = {
-                    "EDAD": float(df_h.loc["EDAD", lote]),
-                    "UNIFORMIDAD": float(df_h.loc["UNIFORMIDAD (%)", lote]),
-                    "AVES_ENTREGADAS": float(df_h.loc["AVES ENTREGADAS", lote]),
-                    "POBLACION_INICIAL": float(df_h.loc["POBLACIÓN INICIAL", lote]),
-                    "PCT_CUMP_AVES": float(df_h.loc["% CUMPL. AVES", lote]),
-                    "PESO": float(df_h.loc["PESO", lote]),
-                    "PESO_STD": float(df_h.loc["PESO STD", lote]),
-                    "PCT_CUMP_PESO": float(df_h.loc["% CUMPL. PESO", lote]),
+                    k: float(df_h.loc[row, lote])
+                    for k, row in {
+                        "EDAD": [i for i in df_h.index if "EDAD" in i][0],
+                        "UNIFORMIDAD": [i for i in df_h.index if "UNIFORMIDAD" in i][0],
+                        "AVES_ENTREGADAS": [i for i in df_h.index if "AVES" in i][0],
+                        "POBLACION_INICIAL": [i for i in df_h.index if "POBLACIÓN" in i][0],
+                        "PCT_CUMP_AVES": [i for i in df_h.index if "CUMPL" in i and "AVE" in i][0],
+                        "PESO": [i for i in df_h.index if i == "PESO"][0],
+                        "PESO_STD": [i for i in df_h.index if "STD" in i][0],
+                        "PCT_CUMP_PESO": [i for i in df_h.index if "CUMPL" in i and "PESO" in i][0],
+                    }.items()
                 }
 
-                # ♂️ MACHOS
                 st.session_state.datos_productivos[lote]["MACHOS"] = {
-                    "EDAD": float(df_m.loc["EDAD", lote]),
-                    "UNIFORMIDAD": float(df_m.loc["UNIFORMIDAD (%)", lote]),
-                    "AVES_ENTREGADAS": float(df_m.loc["AVES ENTREGADAS", lote]),
-                    "POBLACION_INICIAL": float(df_m.loc["POBLACIÓN INICIAL", lote]),
-                    "PESO": float(df_m.loc["PESO", lote]),
-                    "PESO_STD": float(df_m.loc["PESO STD", lote]),
-                    "PCT_CUMP_PESO": float(df_m.loc["% CUMPL. PESO", lote]),
+                    k: float(df_m.loc[row, lote])
+                    for k, row in {
+                        "EDAD": [i for i in df_m.index if "EDAD" in i][0],
+                        "UNIFORMIDAD": [i for i in df_m.index if "UNIFORMIDAD" in i][0],
+                        "AVES_ENTREGADAS": [i for i in df_m.index if "AVES" in i][0],
+                        "POBLACION_INICIAL": [i for i in df_m.index if "POBLACIÓN" in i][0],
+                        "PESO": [i for i in df_m.index if i == "PESO"][0],
+                        "PESO_STD": [i for i in df_m.index if "STD" in i][0],
+                        "PCT_CUMP_PESO": [i for i in df_m.index if "CUMPL" in i][0],
+                    }.items()
                 }
 
         # =========================
-        # 5️⃣ GUARDAR EN SESSION STATE
+        # 5️⃣ SESSION STATE
         # =========================
         st.session_state.tabla = df.copy()
         st.session_state.df_edit = df.copy()
@@ -1580,6 +1590,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
