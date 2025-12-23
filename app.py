@@ -1133,6 +1133,38 @@ with tab1:
     st.markdown("### 💰 Resultado final por trabajador")
     st.dataframe(df_final, use_container_width=True)
 
+    # =========================
+    # RESUMEN POR LOTE
+    # =========================
+    st.markdown("### 📦 Resumen por lote")
+    st.dataframe(resumen_lote, use_container_width=True)
+
+    # =========================
+    # GRÁFICA: DISTRIBUCIÓN DE PAGO POR LOTE
+    # =========================
+    st.markdown("### 📊 Distribución de pago por lote")
+
+    import plotly.express as px
+
+    fig = px.bar(
+        resumen_lote,
+        x="Lote",
+        y="Total S/",
+        text="Total S/",
+        labels={"Total S/": "Total S/"},
+    )
+
+    fig.update_traces(texttemplate="S/ %{text:.2f}", textposition="outside")
+    fig.update_layout(
+        yaxis_title="Total S/",
+        xaxis_title="Lote",
+        uniformtext_minsize=8,
+        uniformtext_mode="hide",
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
 # -------- TAB 2: ENVIAR POR CORREO --------
 with tab2:
     st.markdown("### 📧 Enviar resultado por correo corporativo")
@@ -1383,5 +1415,6 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
