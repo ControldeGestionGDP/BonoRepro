@@ -1421,12 +1421,14 @@ with tab2:
                         "Uniformidad (%)": 2,
                         "% Cumpl. aves": 2,
                         "% Cumpl. peso": 2,
+                        "Peso": 3,
                         "Peso STD": 2
                     })}
                     <h3>🐔 Datos productivos – Levante (Machos)</h3>
                     {tabla_html_limpia_invertida(df_m_mail, {
                         "Uniformidad (%)": 2,
                         "% Cumpl. peso": 2,
+                        "Peso": 3,
                         "Peso STD": 3
                     })}
                     """
@@ -1478,6 +1480,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
