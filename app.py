@@ -3,15 +3,26 @@ import pandas as pd
 from io import BytesIO
 import plotly.express as px
 
-def leer_bloque_invertido(raw, archivo, fila_inicio, fila_fin):
+def leer_bloque_invertido(archivo, fila_inicio, fila_fin):
     df = pd.read_excel(
         archivo,
         sheet_name="BONO_REPRODUCTORAS",
-        header=fila_inicio
+        header=None
     )
-    df = df.iloc[: fila_fin - fila_inicio - 1]
-    df = df.set_index(df.columns[0])
-    return df
+
+    bloque = df.iloc[fila_inicio:fila_fin].dropna(how="all")
+
+    # Primera fila del bloque = encabezados (lotes)
+    header = bloque.iloc[0].astype(str).str.strip()
+    bloque = bloque.iloc[1:]
+    bloque.columns = header
+
+    # Primera columna = nombres de campos
+    bloque = bloque.rename(columns={bloque.columns[0]: "CAMPO"})
+    bloque = bloque.set_index("CAMPO")
+
+    return bloque
+
 
 # =========================
 # CONFIGURACIÓN GLOBAL
@@ -1584,6 +1595,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
