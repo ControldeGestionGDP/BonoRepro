@@ -4,21 +4,51 @@ from io import BytesIO
 import plotly.express as px
 
 def leer_bloque_invertido(archivo, fila_inicio, fila_fin):
+
     df = pd.read_excel(
         archivo,
         sheet_name="BONO_REPRODUCTORAS",
         header=None
     )
 
-    bloque = df.iloc[fila_inicio:fila_fin].dropna(how="all")
+    # --- Validación básica de rango ---
+    if fila_fin <= fila_inicio:
+        raise ValueError(
+            f"Rango inválido: fila_inicio={fila_inicio}, fila_fin={fila_fin}"
+        )
 
-    # Primera fila del bloque = encabezados (lotes)
+    # --- Extraer bloque ---
+    bloque = df.iloc[fila_inicio:fila_fin].copy()
+
+    # Eliminar filas totalmente vacías
+    bloque = bloque.dropna(how="all")
+
+    # Resetear índice para evitar errores con iloc
+    bloque = bloque.reset_index(drop=True)
+
+    # Debe haber al menos encabezado + 1 fila
+    if bloque.shape[0] < 2:
+        raise ValueError(
+            f"No se encontró información productiva válida entre filas "
+            f"{fila_inicio} y {fila_fin}. "
+            f"Filas útiles detectadas: {bloque.shape[0]}"
+        )
+
+    # --- Primera fila = encabezados (lotes) ---
     header = bloque.iloc[0].astype(str).str.strip()
-    bloque = bloque.iloc[1:]
+    bloque = bloque.iloc[1:].copy()
+
+    # Validar que existan datos luego del header
+    if bloque.empty:
+        raise ValueError(
+            "El bloque productivo no contiene filas de datos después del encabezado."
+        )
+
     bloque.columns = header
 
-    # Primera columna = nombres de campos
+    # --- Primera columna = nombre del campo ---
     bloque = bloque.rename(columns={bloque.columns[0]: "CAMPO"})
+    bloque["CAMPO"] = bloque["CAMPO"].astype(str).str.strip()
     bloque = bloque.set_index("CAMPO")
 
     return bloque
@@ -398,25 +428,29 @@ if opcion_inicio == "➕ Iniciar desde cero":
         st.success("✅ Cruce de trabajadores realizado")
 
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
+
     archivo_prev = st.file_uploader(
         "📂 Subir Excel previamente generado",
         type=["xlsx"]
     )
 
     if archivo_prev:
-        # Leer todo el Excel sin encabezados
+
+        # ==================================================
+        # LEER TODO EL EXCEL SIN ENCABEZADOS
+        # ==================================================
         raw = pd.read_excel(
             archivo_prev,
             sheet_name="BONO_REPRODUCTORAS",
             header=None
         )
 
-        # =========================
+        # ==================================================
         # 1️⃣ ENCABEZADO
-        # =========================
+        # ==================================================
         encabezado = raw.iloc[0:4, 0:2].copy()
         encabezado.columns = ["CAMPO", "VALOR"]
-        encabezado["CAMPO"] = encabezado["CAMPO"].str.upper().str.strip()
+        encabezado["CAMPO"] = encabezado["CAMPO"].astype(str).str.upper().str.strip()
 
         st.session_state.granja_seleccionada = encabezado.loc[
             encabezado["CAMPO"] == "GRANJA", "VALOR"
@@ -430,43 +464,56 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
             encabezado["CAMPO"] == "LOTES", "VALOR"
         ].values[0]
 
-        lotes = [l.strip() for l in lotes_txt.split(",")]
+        lotes = [l.strip() for l in lotes_txt.split(",") if l.strip()]
 
         st.session_state.tipo = tipo
         st.session_state.lotes = lotes
 
-        # =========================
-        # 2️⃣ CONFIGURACIÓN DE LOTES
-        # =========================
-        fila_lotes = raw[raw.iloc[:, 0] == "Lote"].index[0]
+        # ==================================================
+        # 2️⃣ CONFIGURACIÓN DE LOTES (ROBUSTO)
+        # ==================================================
+        fila_lotes = raw[
+            raw.iloc[:, 0].astype(str).str.strip().eq("Lote")
+        ].index[0]
 
-        df_lotes = pd.read_excel(
-            archivo_prev,
-            sheet_name="BONO_REPRODUCTORAS",
-            header=fila_lotes
-        )
+        # buscar fin real de la tabla de lotes
+        i = fila_lotes + 1
+        while i < len(raw):
+            val = raw.iloc[i, 0]
+            if pd.isna(val) or str(val).strip() == "":
+                break
+            i += 1
+
+        fila_lotes_fin = i
+
+        df_lotes = raw.iloc[fila_lotes:fila_lotes_fin].copy()
+        df_lotes.columns = df_lotes.iloc[0].astype(str).str.strip()
+        df_lotes = df_lotes.iloc[1:].copy()
 
         config_lotes = {}
         for _, r in df_lotes.iterrows():
-            if pd.isna(r["Lote"]):
-                break
+            lote_val = str(r.get("Lote", "")).strip()
+            if not lote_val:
+                continue
 
             try:
-                monto = float(str(r["Monto S/"]).replace(",", "").strip())
+                monto = float(str(r.get("Monto S/", "0")).replace(",", "").strip())
             except:
                 monto = 0.0
 
-            config_lotes[str(r["Lote"]).strip()] = {
-                "GENETICA": str(r["Genética"]).upper().strip(),
+            config_lotes[lote_val] = {
+                "GENETICA": str(r.get("Genética", "")).upper().strip(),
                 "MONTO": monto
             }
 
         st.session_state.config_lotes = config_lotes
 
-        # =========================
+        # ==================================================
         # 3️⃣ TABLA DE TRABAJADORES
-        # =========================
-        fila_tabla = raw[raw.iloc[:, 0] == "DNI"].index[0]
+        # ==================================================
+        fila_tabla = raw[
+            raw.iloc[:, 0].astype(str).str.strip().eq("DNI")
+        ].index[0]
 
         df = pd.read_excel(
             archivo_prev,
@@ -485,19 +532,21 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
         st.session_state.tabla = df.copy()
         st.session_state.df_edit = df.copy()
-        df_base = df.copy()  # base para agregar trabajadores
+        df_base = df.copy()
 
-        # =========================
+        # ==================================================
         # 4️⃣ DATOS PRODUCTIVOS
-        # =========================
+        # ==================================================
         st.session_state.datos_productivos = {}
 
-        # ---- PRODUCCIÓN ----
+        # --------------------------------------------------
+        # 🏭 PRODUCCIÓN
+        # --------------------------------------------------
         if tipo == "PRODUCCIÓN":
 
             df_prod = leer_bloque_invertido(
                 archivo_prev,
-                fila_inicio=fila_lotes + len(df_lotes) + 2,
+                fila_inicio=fila_lotes_fin + 2,
                 fila_fin=fila_tabla
             )
 
@@ -514,20 +563,24 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                     "VALIDACION": "CERRADO"
                 }
 
-        # ---- LEVANTE ----
+        # --------------------------------------------------
+        # 🐔 LEVANTE (HEMBRAS / MACHOS)
+        # --------------------------------------------------
         else:
 
-            inicio_h = fila_lotes + len(df_lotes) + 2
+            inicio_h = fila_lotes_fin + 2
 
             df_h = leer_bloque_invertido(
                 archivo_prev,
                 fila_inicio=inicio_h,
-                fila_fin=inicio_h + 12
+                fila_fin=fila_tabla
             )
+
+            inicio_m = inicio_h + len(df_h) + 2
 
             df_m = leer_bloque_invertido(
                 archivo_prev,
-                fila_inicio=inicio_h + len(df_h) + 2,
+                fila_inicio=inicio_m,
                 fila_fin=fila_tabla
             )
 
@@ -555,7 +608,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                 }
 
         st.success("✅ Excel cargado y reconstruido correctamente")
-
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -1595,6 +1647,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
