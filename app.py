@@ -37,12 +37,21 @@ def leer_bloque_invertido(archivo, fila_inicio, fila_fin):
             "El bloque productivo no contiene filas de datos después del encabezado."
         )
 
-    # 🔒 PRIMERA COLUMNA COMO CAMPO (SEGURO)
-    bloque.iloc[:, 0] = bloque.iloc[:, 0].astype(str).str.strip()
-    bloque = bloque.set_index(bloque.columns[0])
-    bloque.index.name = "CAMPO"
+   # 🔒 PRIMERA COLUMNA COMO CAMPO (SEGURO)
+bloque.iloc[:, 0] = bloque.iloc[:, 0].astype(str).str.strip()
+bloque = bloque.set_index(bloque.columns[0])
+bloque.index.name = "CAMPO"
 
-    return bloque
+# ✅ NORMALIZAR NOMBRES DE CAMPOS (ÍNDICE)
+bloque.index = (
+    bloque.index
+    .str.upper()
+    .str.replace(r"\s+", " ", regex=True)
+    .str.replace(":", "", regex=False)
+    .str.strip()
+)
+
+return bloque
 
 
 # =========================
@@ -1638,6 +1647,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
