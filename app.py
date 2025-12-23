@@ -416,7 +416,6 @@ if opcion_inicio == "➕ Iniciar desde cero":
         )
 
         st.success("✅ Cruce de trabajadores realizado")
-
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader(
         "📂 Subir Excel previamente generado",
@@ -456,17 +455,17 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         lotes = [l.strip() for l in lotes_txt.split(",")]
 
         # =========================
-        # 2️⃣ CONFIGURACIÓN POR LOTE (ROBUSTO)
+        # 2️⃣ CONFIGURACIÓN POR LOTE (ROBUSTA, SOLO A–C)
         # =========================
         fila_lotes = raw[
             raw.iloc[:, 0].astype(str).str.strip().str.upper() == "LOTE"
         ].index[0]
 
-        # Leer SOLO columnas A, B y C (Lote, Genética, Monto)
+        # Leer SOLO columnas A, B y C
         df_lotes_raw = raw.iloc[fila_lotes + 1:, 0:3].copy()
         df_lotes_raw.columns = ["LOTE", "GENETICA", "MONTO"]
 
-        # Limpieza
+        # Limpieza fuerte
         df_lotes_raw["LOTE"] = df_lotes_raw["LOTE"].astype(str).str.strip()
         df_lotes_raw["GENETICA"] = (
             df_lotes_raw["GENETICA"]
@@ -484,15 +483,15 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
             df_lotes_raw["MONTO"], errors="coerce"
         )
 
-        # Cortar cuando LOTE esté vacío (evita leer Hembras/Machos)
+        # Cortar al primer vacío (evita Hembras/Machos)
         df_lotes_raw = df_lotes_raw[
             df_lotes_raw["LOTE"].notna() & (df_lotes_raw["LOTE"] != "")
         ]
 
-        # Construir config_lotes
+        # Construir config_lotes LIMPIO
         config_lotes = {}
         for _, r in df_lotes_raw.iterrows():
-            lote = r["LOTE"]
+            lote = str(r["LOTE"]).strip()
             config_lotes[lote] = {
                 "GENETICA": r["GENETICA"] if r["GENETICA"] else "ROSS",
                 "MONTO": float(r["MONTO"]) if pd.notna(r["MONTO"]) else 0.0
@@ -544,7 +543,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
             for lote in df_h.columns:
                 st.session_state.datos_productivos.setdefault(lote, {})
 
-                # ♀️ HEMBRAS
                 st.session_state.datos_productivos[lote]["HEMBRAS"] = {
                     "EDAD": get_valor(df_h, 0, lote),
                     "UNIFORMIDAD": get_valor(df_h, 1, lote),
@@ -556,7 +554,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                     "PCT_CUMP_PESO": get_valor(df_h, 7, lote),
                 }
 
-                # ♂️ MACHOS
                 st.session_state.datos_productivos[lote]["MACHOS"] = {
                     "EDAD": get_valor(df_m, 0, lote),
                     "UNIFORMIDAD": get_valor(df_m, 1, lote),
@@ -568,7 +565,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                 }
 
         # =========================
-        # 5️⃣ SESSION STATE
+        # 5️⃣ SESSION STATE FINAL
         # =========================
         st.session_state.tabla = df.copy()
         st.session_state.df_edit = df.copy()
@@ -576,11 +573,10 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         st.session_state.lotes = lotes
         st.session_state.tipo = tipo
 
-        # 🔑 FLAG CLAVE
+        # 🔑 FLAG CRÍTICO PARA LA UI
         st.session_state.cargado_desde_excel = True
 
         st.success("✅ Excel cargado y reconstruido correctamente")
-
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -891,16 +887,9 @@ if tipo == "LEVANTE":
         st.success("✅ Datos de MACHOS guardados correctamente")
 
 # =========================
-# 🧬 CONFIGURACIÓN POR LOTE
+# 🧬 CONFIGURACIÓN POR LOTE (FINAL CORRECTO)
 # =========================
-if not confirmar_inicio:
-    st.info("🔒 Confirme Granja, Tipo de proceso y Lotes para continuar.")
-    st.stop()
-
 st.subheader("🧬 Configuración por lote")
-
-if "config_lotes" not in st.session_state:
-    st.session_state.config_lotes = {}
 
 config_lotes = st.session_state.config_lotes
 cols = st.columns(len(lotes))
@@ -911,17 +900,12 @@ for i, lote in enumerate(lotes):
         key_gen = f"gen_{lote}_v2"
         key_monto = f"monto_{lote}_v2"
 
-        # Valores desde config_lotes
-        valor_gen = str(config_lotes.get(lote, {}).get("GENETICA", "ROSS"))
-        valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 0.0))
-
-        # 🔑 PRECARGA SOLO UNA VEZ (Excel)
-        if st.session_state.get("cargado_desde_excel", False):
-            st.session_state[key_gen] = valor_gen
-            st.session_state[key_monto] = valor_monto
+        valor_gen = config_lotes[lote]["GENETICA"]
+        valor_monto = config_lotes[lote]["MONTO"]
 
         genetica = st.text_input(
             f"Genética - Lote {lote}",
+            value=valor_gen,
             key=key_gen
         )
 
@@ -929,20 +913,17 @@ for i, lote in enumerate(lotes):
             f"Monto S/ - Lote {lote}",
             min_value=0.0,
             step=50.0,
+            value=valor_monto,
             key=key_monto
         )
 
-        # Guardar siempre lo que esté en pantalla
         config_lotes[lote] = {
-            "GENETICA": genetica.upper() if genetica else "ROSS",
+            "GENETICA": genetica.upper(),
             "MONTO": monto
         }
 
 st.session_state.config_lotes = config_lotes
-
-# 🔒 Apagar flag luego del primer render
-if st.session_state.get("cargado_desde_excel", False):
-    st.session_state.cargado_desde_excel = False
+st.session_state.cargado_desde_excel = False
 
 
 # SESSION STATE tabla
@@ -1635,6 +1616,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
