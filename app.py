@@ -1113,12 +1113,13 @@ def tabla_html_limpia(df, decimales_por_fila=None):
 with tab2:
     st.markdown("### 📧 Enviar resultado por correo corporativo")
 
-    # =========================
-    # Helper: HTML limpio (ENTEROS sin .00)
-    # =========================
+    # ==================================================
+    # Helper: HTML limpio, compacto y bien alineado
+    # ==================================================
     def tabla_html_limpia(df, decimales_por_fila=None):
         df_fmt = df.copy()
 
+        # ---- Formateo por fila (tabla invertida) ----
         for fila in df_fmt.index:
             serie = pd.to_numeric(df_fmt.loc[fila], errors="coerce")
 
@@ -1129,38 +1130,39 @@ with tab2:
                         lambda x: f"{x:.{dec}f}" if pd.notna(x) else ""
                     )
                 else:
-                    # 👉 ENTEROS LIMPIOS
+                    # ENTEROS limpios
                     df_fmt.loc[fila] = serie.apply(
                         lambda x: f"{int(x)}" if pd.notna(x) else ""
                     )
 
         html = df_fmt.to_html(index=True, border=1)
 
-        # ===== ESTILOS (Outlook-safe) =====
+        # ---- Estilos Outlook-safe ----
         html = html.replace(
             "<table",
-            "<table style='border-collapse:collapse; width:100%; font-family:Arial, sans-serif; font-size:12px;'"
+            "<table style='border-collapse:collapse; width:auto; max-width:720px; "
+            "font-family:Arial, sans-serif; font-size:12px;'"
         )
+
+        # Encabezados (lotes y nombres de fila)
         html = html.replace(
             "<th>",
-            "<th style='border:1px solid #d1d5db; background:#f3f4f6; padding:6px; text-align:left;'>"
+            "<th style='border:1px solid #d1d5db; background:#f3f4f6; "
+            "padding:6px 8px; text-align:left; white-space:nowrap;'>"
         )
+
+        # Celdas numéricas
         html = html.replace(
             "<td>",
-            "<td style='border:1px solid #d1d5db; padding:6px; text-align:right;'>"
-        )
-        # Primera columna (nombres de filas) a la izquierda
-        html = html.replace(
-            "<td style='border:1px solid #d1d5db; padding:6px; text-align:right;'>",
-            "<td style='border:1px solid #d1d5db; padding:6px; text-align:left;'>",
-            1
+            "<td style='border:1px solid #d1d5db; padding:6px 8px; "
+            "text-align:right; white-space:nowrap;'>"
         )
 
         return html
 
-    # =========================
+    # ==================================================
     # Inputs
-    # =========================
+    # ==================================================
     correo_destino = st.text_input("Correo destino", key="correo_destino")
     asunto = st.text_input(
         "Asunto",
@@ -1183,115 +1185,89 @@ with tab2:
                 msg["To"] = correo_destino
                 msg["Subject"] = asunto
 
-                # =========================
-                # RESUMEN POR LOTE
-                # =========================
-                resumen_lote_mail = resumen_lote.copy()
-                resumen_lote_mail["Total S/"] = resumen_lote_mail["Total S/"].apply(lambda x: f"{x:.2f}")
-                resumen_lote_mail["% del total"] = resumen_lote_mail["% del total"].apply(lambda x: f"{x:.2f}")
+                # ==================================================
+                # DATOS PRODUCTIVOS – LEVANTE
+                # ==================================================
+                # ---------- HEMBRAS ----------
+                campos_h = {
+                    "Edad": "EDAD",
+                    "Uniformidad (%)": "UNIFORMIDAD",
+                    "Aves entregadas": "AVES_ENTREGADAS",
+                    "Población inicial": "POBLACION_INICIAL",
+                    "% Cumpl. aves": "PCT_CUMP_AVES",
+                    "Peso": "PESO",
+                    "Peso STD": "PESO_STD",
+                    "% Cumpl. peso": "PCT_CUMP_PESO",
+                }
 
-                tabla_lote_html = resumen_lote_mail.to_html(index=False, border=1)
+                df_h = pd.DataFrame({
+                    campo: [
+                        st.session_state.datos_productivos
+                        .get(l, {}).get("HEMBRAS", {}).get(key, 0)
+                        for l in lotes
+                    ]
+                    for campo, key in campos_h.items()
+                }, index=lotes).T
 
-                # =========================
-                # RESULTADO FINAL
-                # =========================
-                df_final_mail = df_final.copy()
-                for c in df_final_mail.columns:
-                    if c.startswith("PAGO_") or c == "TOTAL S/":
-                        df_final_mail[c] = df_final_mail[c].apply(lambda x: f"{x:.2f}")
-
-                tabla_resultado_html = df_final_mail.to_html(index=False, border=1)
-
-                # =========================
-                # DATOS PRODUCTIVOS
-                # =========================
-                if tipo == "LEVANTE":
-
-                    # ---------- HEMBRAS ----------
-                    campos_h = {
-                        "Edad": "EDAD",
-                        "Uniformidad (%)": "UNIFORMIDAD",
-                        "Aves entregadas": "AVES_ENTREGADAS",
-                        "Población inicial": "POBLACION_INICIAL",
-                        "% Cumpl. aves": "PCT_CUMP_AVES",
-                        "Peso": "PESO",
-                        "Peso STD": "PESO_STD",
-                        "% Cumpl. peso": "PCT_CUMP_PESO",
+                tabla_h_html = tabla_html_limpia(
+                    df_h,
+                    decimales_por_fila={
+                        "Uniformidad (%)": 2,
+                        "% Cumpl. aves": 2,
+                        "% Cumpl. peso": 2,
+                        "Peso STD": 2
                     }
+                )
 
-                    df_h = pd.DataFrame({
-                        campo: [
-                            st.session_state.datos_productivos
-                            .get(l, {}).get("HEMBRAS", {}).get(key, 0)
-                            for l in lotes
-                        ]
-                        for campo, key in campos_h.items()
-                    }, index=lotes).T
+                # ---------- MACHOS ----------
+                campos_m = {
+                    "Edad": "EDAD",
+                    "Uniformidad (%)": "UNIFORMIDAD",
+                    "Aves entregadas": "AVES_ENTREGADAS",
+                    "Población inicial": "POBLACION_INICIAL",
+                    "Peso": "PESO",
+                    "Peso STD": "PESO_STD",
+                    "% Cumpl. peso": "PCT_CUMP_PESO",
+                }
 
-                    tabla_h_html = tabla_html_limpia(
-                        df_h,
-                        decimales_por_fila={
-                            "Uniformidad (%)": 2,
-                            "% Cumpl. aves": 2,
-                            "% Cumpl. peso": 2,
-                            "Peso STD": 2
-                        }
-                    )
+                df_m = pd.DataFrame({
+                    campo: [
+                        st.session_state.datos_productivos
+                        .get(l, {}).get("MACHOS", {}).get(key, 0)
+                        for l in lotes
+                    ]
+                    for campo, key in campos_m.items()
+                }, index=lotes).T
 
-                    # ---------- MACHOS ----------
-                    campos_m = {
-                        "Edad": "EDAD",
-                        "Uniformidad (%)": "UNIFORMIDAD",
-                        "Aves entregadas": "AVES_ENTREGADAS",
-                        "Población inicial": "POBLACION_INICIAL",
-                        "Peso": "PESO",
-                        "Peso STD": "PESO_STD",
-                        "% Cumpl. peso": "PCT_CUMP_PESO",
+                tabla_m_html = tabla_html_limpia(
+                    df_m,
+                    decimales_por_fila={
+                        "Uniformidad (%)": 2,
+                        "% Cumpl. peso": 2,
+                        "Peso STD": 3   # 🔒 requerido
                     }
+                )
 
-                    df_m = pd.DataFrame({
-                        campo: [
-                            st.session_state.datos_productivos
-                            .get(l, {}).get("MACHOS", {}).get(key, 0)
-                            for l in lotes
-                        ]
-                        for campo, key in campos_m.items()
-                    }, index=lotes).T
+                bloque_productivo_html = f"""
+                <h3>🐔 Datos productivos – Levante (Hembras)</h3>
+                {tabla_h_html}
+                <h3>🐔 Datos productivos – Levante (Machos)</h3>
+                {tabla_m_html}
+                """
 
-                    tabla_m_html = tabla_html_limpia(
-                        df_m,
-                        decimales_por_fila={
-                            "Uniformidad (%)": 2,
-                            "% Cumpl. peso": 2,
-                            "Peso STD": 3   # 🔒 exacto
-                        }
-                    )
-
-                    bloque_productivo_html = f"""
-                    <h3>🐔 Datos productivos – Levante (Hembras)</h3>
-                    {tabla_h_html}
-                    <h3>🐔 Datos productivos – Levante (Machos)</h3>
-                    {tabla_m_html}
-                    """
-
-                # =========================
-                # CUERPO
-                # =========================
+                # ==================================================
+                # CUERPO DEL CORREO
+                # ==================================================
                 cuerpo_html = f"""
                 <html>
-                <body style="font-family:Arial; font-size:12px;">
+                <body style="font-family:Arial, sans-serif; font-size:12px;">
                     <h2>Bono Reproductoras GDP</h2>
+
                     <p><b>Granja:</b> {st.session_state.get("granja_seleccionada","")}</p>
                     <p><b>Tipo:</b> {tipo}</p>
                     <p><b>Lotes:</b> {", ".join(lotes)}</p>
 
                     {bloque_productivo_html}
-
-                    <h3>📦 Resumen por lote</h3>
-                    {tabla_lote_html}
-
-                    <h3>💰 Resultado final por trabajador</h3>
-                    {tabla_resultado_html}
 
                     <p>{mensaje}</p>
                     <p><b>Equipo de Control de Gestión</b></p>
