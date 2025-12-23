@@ -1134,8 +1134,20 @@ with tab1:
     st.dataframe(df_final, use_container_width=True)
 
     # =========================
-    # RESUMEN POR LOTE
+    # RESUMEN POR LOTE (SE CREA AQUÍ)
     # =========================
+    resumen_lote = (
+        df_final[pagos]
+        .sum()
+        .reset_index()
+        .rename(columns={"index": "Lote", 0: "Total S/"})
+    )
+
+    resumen_lote["Lote"] = resumen_lote["Lote"].str.replace("PAGO_", "")
+    resumen_lote["% del total"] = (
+        resumen_lote["Total S/"] / resumen_lote["Total S/"].sum() * 100
+    ).round(2)
+
     st.markdown("### 📦 Resumen por lote")
     st.dataframe(resumen_lote, use_container_width=True)
 
@@ -1154,7 +1166,11 @@ with tab1:
         labels={"Total S/": "Total S/"},
     )
 
-    fig.update_traces(texttemplate="S/ %{text:.2f}", textposition="outside")
+    fig.update_traces(
+        texttemplate="S/ %{text:.2f}",
+        textposition="outside"
+    )
+
     fig.update_layout(
         yaxis_title="Total S/",
         xaxis_title="Lote",
@@ -1415,6 +1431,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
