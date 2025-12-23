@@ -342,26 +342,34 @@ def factor_faltas(f):
 # =========================
 # HELPER – LECTURA DE TABLAS INVERTIDAS (LEVANTE)
 # =========================
-def leer_bloque_invertido(raw, fila_inicio, fila_fin):
-    bloque = raw.iloc[fila_inicio:fila_fin].copy()
+def leer_bloque_invertido(raw, fila_inicio, n_filas):
+    """
+    raw        : dataframe completo sin header
+    fila_inicio: fila donde está 'Edad'
+    n_filas    : número de filas del bloque
+    """
 
-    header = bloque.iloc[0].astype(str)
-    bloque = bloque.iloc[1:]
-    bloque.columns = ["CAMPO"] + list(header[1:])
-
-    bloque["CAMPO"] = (
-        bloque["CAMPO"]
+    # encabezados (lotes) están UNA FILA ARRIBA
+    lotes = (
+        raw.iloc[fila_inicio - 1, 1:]
         .astype(str)
-        .str.replace("\xa0", " ", regex=False)
-        .str.replace("\n", " ", regex=False)
-        .str.replace("\r", " ", regex=False)
+        .str.replace(".0", "", regex=False)
         .str.strip()
-        .str.upper()
     )
 
-    bloque = bloque.set_index("CAMPO")
+    bloque = raw.iloc[fila_inicio:fila_inicio + n_filas].copy()
 
-    return bloque
+    data = bloque.iloc[:, 1:]
+    data.columns = lotes
+
+    data.index = (
+        bloque.iloc[:, 0]
+        .astype(str)
+        .str.strip()
+    )
+
+    return data
+
 
 def get_valor(df, fila_idx, col, default=0.0):
     try:
@@ -369,6 +377,7 @@ def get_valor(df, fila_idx, col, default=0.0):
         return float(v) if pd.notna(v) else default
     except:
         return default
+
 
 # =========================
 # CARGA DE ARCHIVOS SEGÚN OPCIÓN
@@ -493,31 +502,34 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         )
 
         # =========================
-        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE (CORRECTO)
+        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE
         # =========================
         if tipo == "LEVANTE":
 
             st.session_state.datos_productivos = {}
 
-            # 🔑 BUSCAR LAS DOS FILAS "EDAD" (Hembras y Machos)
+            # localizar las dos filas "Edad"
             idx_edades = raw[
                 raw.iloc[:, 0].astype(str).str.strip().str.upper() == "EDAD"
             ].index.tolist()
 
             if len(idx_edades) < 2:
-                st.error("❌ No se encontraron dos bloques de EDAD (Hembras y Machos)")
+                st.error("❌ No se detectaron bloques de Hembras y Machos")
                 st.stop()
 
-            inicio_h = idx_edades[0]   # Hembras
-            inicio_m = idx_edades[1]   # Machos
+            inicio_h = idx_edades[0]  # Hembras
+            inicio_m = idx_edades[1]  # Machos
 
-            df_h = leer_bloque_invertido(raw, inicio_h, inicio_h + 8)
-            df_m = leer_bloque_invertido(raw, inicio_m, inicio_m + 7)
+            # Hembras = 8 filas
+            df_h = leer_bloque_invertido(raw, inicio_h, 8)
+
+            # Machos = 7 filas
+            df_m = leer_bloque_invertido(raw, inicio_m, 7)
 
             for lote in df_h.columns:
                 st.session_state.datos_productivos.setdefault(lote, {})
 
-                # ♀️ HEMBRAS (orden fijo)
+                # ♀️ HEMBRAS
                 st.session_state.datos_productivos[lote]["HEMBRAS"] = {
                     "EDAD": get_valor(df_h, 0, lote),
                     "UNIFORMIDAD": get_valor(df_h, 1, lote),
@@ -529,7 +541,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                     "PCT_CUMP_PESO": get_valor(df_h, 7, lote),
                 }
 
-                # ♂️ MACHOS (orden fijo)
+                # ♂️ MACHOS
                 st.session_state.datos_productivos[lote]["MACHOS"] = {
                     "EDAD": get_valor(df_m, 0, lote),
                     "UNIFORMIDAD": get_valor(df_m, 1, lote),
@@ -1590,6 +1602,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
