@@ -1011,28 +1011,6 @@ st.subheader("📬 Opciones finales")
 
 tab1, tab2 = st.tabs(["📊 Previsualizar resultado", "📧 Enviar por correo"])
 
-# =========================
-# RESUMEN EJECUTIVO
-# =========================
-total_general = df_final["TOTAL S/"].sum()
-num_trabajadores = df_final.shape[0]
-lote_mayor = (
-    df_final[pagos]
-    .sum()
-    .idxmax()
-    .replace("PAGO_", "")
-)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric("💰 Total general (S/)", f"{total_general:,.2f}")
-
-with col2:
-    st.metric("👥 N° de trabajadores", num_trabajadores)
-
-with col3:
-    st.metric("🏷️ Lote con mayor pago", lote_mayor)
 
 # =========================
 # RESUMEN POR LOTE
@@ -1086,6 +1064,29 @@ st.plotly_chart(fig_lote, use_container_width=True)
 with tab1:
 
     st.markdown("## 📊 Previsualización integral del proceso")
+
+    # =========================
+    # RESUMEN EJECUTIVO
+    # =========================
+    total_general = df_final["TOTAL S/"].sum()
+    num_trabajadores = df_final.shape[0]
+    lote_mayor = (
+        df_final[pagos]
+        .sum()
+        .idxmax()
+        .replace("PAGO_", "")
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("💰 Total general (S/)", f"{total_general:,.2f}")
+
+    with col2:
+        st.metric("👥 N° de trabajadores", num_trabajadores)
+
+    with col3:
+        st.metric("🏷️ Lote con mayor pago", lote_mayor)
 
     # =========================
     # DATOS PRODUCTIVOS
@@ -1180,6 +1181,7 @@ with tab1:
     # =========================
     st.markdown("### 💰 Resultado final por trabajador")
     st.dataframe(df_final, use_container_width=True)
+
 
 # -------- TAB 2: ENVIAR POR CORREO --------
 with tab2:
@@ -1431,3 +1433,4 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
