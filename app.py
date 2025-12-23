@@ -437,7 +437,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         # =========================
         # 1️⃣ ENCABEZADO
         # =========================
-        encabezado = raw.iloc[0:4, 0:2].copy()
+        encabezado = raw.iloc[0:5, 0:2].copy()
         encabezado.columns = ["CAMPO", "VALOR"]
         encabezado["CAMPO"] = encabezado["CAMPO"].astype(str).str.upper().str.strip()
 
@@ -456,9 +456,11 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         lotes = [l.strip() for l in lotes_txt.split(",")]
 
         # =========================
-        # 2️⃣ CONFIGURACIÓN DE LOTES
+        # 2️⃣ CONFIGURACIÓN POR LOTE
         # =========================
-        fila_lotes = raw[raw.iloc[:, 0] == "Lote"].index[0]
+        fila_lotes = raw[
+            raw.iloc[:, 0].astype(str).str.strip().str.upper() == "LOTE"
+        ].index[0]
 
         df_lotes = pd.read_excel(
             archivo_prev,
@@ -466,25 +468,30 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
             header=fila_lotes
         )
 
+        df_lotes.columns = df_lotes.columns.str.strip().str.upper()
+
         config_lotes = {}
         for _, r in df_lotes.iterrows():
-            if pd.isna(r["Lote"]):
+
+            if pd.isna(r["LOTE"]):
                 continue
 
             try:
-                monto = float(str(r["Monto S/"]).replace(",", "").strip())
+                monto = float(str(r["MONTO S/"]).replace(",", "").strip())
             except:
                 monto = 0.0
 
-            config_lotes[str(r["Lote"]).strip()] = {
-                "GENETICA": str(r["Genética"]).upper().strip(),
+            config_lotes[str(r["LOTE"]).strip()] = {
+                "GENETICA": str(r["GENÉTICA"]).upper().strip(),
                 "MONTO": monto
             }
 
         # =========================
-        # 3️⃣ TABLA TRABAJADORES
+        # 3️⃣ TABLA DE TRABAJADORES
         # =========================
-        fila_tabla = raw[raw.iloc[:, 0] == "DNI"].index[0]
+        fila_tabla = raw[
+            raw.iloc[:, 0].astype(str).str.strip().str.upper() == "DNI"
+        ].index[0]
 
         df = pd.read_excel(
             archivo_prev,
@@ -508,7 +515,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
             st.session_state.datos_productivos = {}
 
-            # localizar las dos filas "Edad"
             idx_edades = raw[
                 raw.iloc[:, 0].astype(str).str.strip().str.upper() == "EDAD"
             ].index.tolist()
@@ -517,13 +523,10 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                 st.error("❌ No se detectaron bloques de Hembras y Machos")
                 st.stop()
 
-            inicio_h = idx_edades[0]  # Hembras
-            inicio_m = idx_edades[1]  # Machos
+            inicio_h = idx_edades[0]   # Hembras
+            inicio_m = idx_edades[1]   # Machos
 
-            # Hembras = 8 filas
             df_h = leer_bloque_invertido(raw, inicio_h, 8)
-
-            # Machos = 7 filas
             df_m = leer_bloque_invertido(raw, inicio_m, 7)
 
             for lote in df_h.columns:
@@ -1602,6 +1605,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
