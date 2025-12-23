@@ -867,34 +867,57 @@ fig.update_traces(texttemplate="S/ %{text:,.2f}", textposition="outside", clipon
 fig.update_layout(xaxis_tickangle=-45, height=550, margin=dict(t=100), yaxis=dict(rangemode="tozero"))
 st.plotly_chart(fig, use_container_width=True)
 
-# Exportar
+# =========================
+# EXPORTAR EXCEL COMPLETO
+# =========================
 output = BytesIO()
 with pd.ExcelWriter(output, engine="openpyxl") as writer:
     sheet_name = "BONO_REPRODUCTORAS"
     fila_actual = 0
 
-    # Encabezado
+    # 1️⃣ Encabezado
     encabezado = pd.DataFrame({
-        "Campo":["Granja","Tipo de Proceso","Lotes","Fecha de Generación"],
-        "Valor":[st.session_state.get("granja_seleccionada",""), tipo, ", ".join(lotes), pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")]
+        "Campo": ["Granja", "Tipo de Proceso", "Lotes", "Fecha de Generación"],
+        "Valor": [
+            st.session_state.get("granja_seleccionada", ""),
+            tipo,
+            ", ".join(lotes),
+            pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+        ]
     })
     encabezado.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
-    fila_actual += len(encabezado)+2
+    fila_actual += len(encabezado) + 2
 
-    # Configuración de lotes
-    df_lotes = pd.DataFrame([{"Lote":l,"Genética":config_lotes[l]["GENETICA"],"Monto S/":config_lotes[l]["MONTO"]} for l in lotes])
+    # 2️⃣ Configuración de lotes
+    df_lotes = pd.DataFrame([
+        {
+            "Lote": l,
+            "Genética": config_lotes[l]["GENETICA"],
+            "Monto S/": config_lotes[l]["MONTO"]
+        }
+        for l in lotes
+    ])
     df_lotes.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
-    fila_actual += len(df_lotes)+3
+    fila_actual += len(df_lotes) + 3
 
-    # Detalle trabajadores
+    # 3️⃣ Datos productivos
+    if tipo == "PRODUCCIÓN":
+        df_prod_excel = pd.DataFrame(data_prod, index=lotes).T
+        df_prod_excel.to_excel(writer, sheet_name=sheet_name, startrow=fila_actual)
+        fila_actual += len(df_prod_excel) + 3
+    else:
+        df_h.to_excel(writer, sheet_name=sheet_name, startrow=fila_actual)
+        fila_actual += len(df_h) + 3
+
+        df_m.to_excel(writer, sheet_name=sheet_name, startrow=fila_actual)
+        fila_actual += len(df_m) + 3
+
+    # 4️⃣ Resumen por lote
+    resumen_lote.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
+    fila_actual += len(resumen_lote) + 2
+
+    # 5️⃣ Resultado final por trabajador
     df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
-
-nombre_archivo = (
-    f"Bono_Reproductoras_"
-    f"{st.session_state.get('granja_seleccionada','NA').replace(' ','')}_"
-    f"{tipo}_"
-    f"{pd.Timestamp.now():%Y%m%d_%H%M}.xlsx"
-)
 
 st.download_button(
     "📥 Descargar archivo final",
@@ -1401,3 +1424,4 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
