@@ -552,6 +552,7 @@ if tipo == "PRODUCCIÓN":
 
     st.subheader("🏭 Información productiva – Producción")
 
+    # Definición de campos
     campos_prod = {
         "Etapa": "ETAPA",
         "Edad (sem)": "EDAD_AVE",
@@ -563,40 +564,46 @@ if tipo == "PRODUCCIÓN":
         "% Huevos bomba": "PCT_HUEVOS_BOMBA",
     }
 
-    data = {}
-    for campo, key in campos_prod.items():
-        data[campo] = [
+    # Construir DataFrame desde session_state
+    data = {
+        campo: [
             st.session_state.datos_productivos
             .get(lote, {})
             .get(key, "Primera etapa" if key == "ETAPA" else 0)
             for lote in lotes
         ]
+        for campo, key in campos_prod.items()
+    }
 
     df_prod = pd.DataFrame(data, index=lotes).T
 
-    df_edit = st.data_editor(
-        df_prod,
-        use_container_width=True,
-        num_rows="fixed",
-        column_config={
-            lote: st.column_config.NumberColumn(format="%.2f")
-            for lote in lotes
-            if lote
-        }
-    )
+    # ===== FORMULARIO (evita doble ingreso) =====
+    with st.form("form_produccion_tabla"):
+        df_edit = st.data_editor(
+            df_prod,
+            use_container_width=True,
+            num_rows="fixed",
+            column_config={
+                lote: st.column_config.NumberColumn(format="%.2f")
+                for lote in lotes
+            }
+        )
 
-    # 🔐 Guardar nuevamente en session_state
-    for lote in lotes:
-        st.session_state.datos_productivos.setdefault(lote, {})
-        for campo, key in campos_prod.items():
-            valor = df_edit.loc[campo, lote]
+        guardar = st.form_submit_button("💾 Guardar Producción")
 
-            if key == "ETAPA":
-                st.session_state.datos_productivos[lote][key] = valor
-            else:
-                st.session_state.datos_productivos[lote][key] = float(valor)
+    # ===== Guardado REAL =====
+    if guardar:
+        for lote in lotes:
+            st.session_state.datos_productivos.setdefault(lote, {})
+            for campo, key in campos_prod.items():
+                valor = df_edit.loc[campo, lote]
+                st.session_state.datos_productivos[lote][key] = (
+                    valor if key == "ETAPA" else float(valor)
+                )
 
-        st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
+            st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
+
+        st.success("✅ Datos de PRODUCCIÓN guardados correctamente")
 
 # =========================
 # DATOS PRODUCTIVOS – LEVANTE (TABLAS INVERTIDAS)
@@ -621,34 +628,41 @@ if tipo == "LEVANTE":
         "% Cumpl. peso": "PCT_CUMP_PESO",
     }
 
-    data_h = {}
-    for campo, key in campos_h.items():
-        data_h[campo] = [
+    data_h = {
+        campo: [
             st.session_state.datos_productivos
             .get(lote, {})
             .get("HEMBRAS", {})
             .get(key, 2.53 if key == "PESO_STD" else 0)
             for lote in lotes
         ]
+        for campo, key in campos_h.items()
+    }
 
     df_h = pd.DataFrame(data_h, index=lotes).T
 
-    df_h_edit = st.data_editor(
-        df_h,
-        use_container_width=True,
-        num_rows="fixed",
-        column_config={
-            lote: st.column_config.NumberColumn(format="%.2f")
-            for lote in lotes
-        }
-    )
+    with st.form("form_levante_hembras"):
+        df_h_edit = st.data_editor(
+            df_h,
+            use_container_width=True,
+            num_rows="fixed",
+            column_config={
+                lote: st.column_config.NumberColumn(format="%.2f")
+                for lote in lotes
+            }
+        )
 
-    for lote in lotes:
-        st.session_state.datos_productivos.setdefault(lote, {})
-        st.session_state.datos_productivos[lote]["HEMBRAS"] = {
-            key: float(df_h_edit.loc[campo, lote])
-            for campo, key in campos_h.items()
-        }
+        guardar_h = st.form_submit_button("💾 Guardar Hembras")
+
+    if guardar_h:
+        for lote in lotes:
+            st.session_state.datos_productivos.setdefault(lote, {})
+            st.session_state.datos_productivos[lote]["HEMBRAS"] = {
+                key: float(df_h_edit.loc[campo, lote])
+                for campo, key in campos_h.items()
+            }
+
+        st.success("✅ Datos de HEMBRAS guardados correctamente")
 
     # =====================================================
     # ♂️ MACHOS
@@ -665,35 +679,41 @@ if tipo == "LEVANTE":
         "% Cumpl. peso": "PCT_CUMP_PESO",
     }
 
-    data_m = {}
-    for campo, key in campos_m.items():
-        data_m[campo] = [
+    data_m = {
+        campo: [
             st.session_state.datos_productivos
             .get(lote, {})
             .get("MACHOS", {})
             .get(key, 2.955 if key == "PESO_STD" else 0)
             for lote in lotes
         ]
+        for campo, key in campos_m.items()
+    }
 
     df_m = pd.DataFrame(data_m, index=lotes).T
 
-    df_m_edit = st.data_editor(
-        df_m,
-        use_container_width=True,
-        num_rows="fixed",
-        column_config={
-            lote: st.column_config.NumberColumn(format="%.3f")
-            for lote in lotes
-        }
-    )
+    with st.form("form_levante_machos"):
+        df_m_edit = st.data_editor(
+            df_m,
+            use_container_width=True,
+            num_rows="fixed",
+            column_config={
+                lote: st.column_config.NumberColumn(format="%.3f")
+                for lote in lotes
+            }
+        )
 
-    for lote in lotes:
-        st.session_state.datos_productivos.setdefault(lote, {})
-        st.session_state.datos_productivos[lote]["MACHOS"] = {
-            key: float(df_m_edit.loc[campo, lote])
-            for campo, key in campos_m.items()
-        }
+        guardar_m = st.form_submit_button("💾 Guardar Machos")
 
+    if guardar_m:
+        for lote in lotes:
+            st.session_state.datos_productivos.setdefault(lote, {})
+            st.session_state.datos_productivos[lote]["MACHOS"] = {
+                key: float(df_m_edit.loc[campo, lote])
+                for campo, key in campos_m.items()
+            }
+
+        st.success("✅ Datos de MACHOS guardados correctamente")
 
 # Configuración por lote
 if not confirmar_inicio:
@@ -1044,20 +1064,4 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
