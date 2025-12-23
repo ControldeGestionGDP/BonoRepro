@@ -868,14 +868,17 @@ fig.update_layout(xaxis_tickangle=-45, height=550, margin=dict(t=100), yaxis=dic
 st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# EXPORTAR EXCEL COMPLETO
+# 📤 EXPORTAR EXCEL COMPLETO
 # =========================
 output = BytesIO()
+
 with pd.ExcelWriter(output, engine="openpyxl") as writer:
     sheet_name = "BONO_REPRODUCTORAS"
     fila_actual = 0
 
-    # 1️⃣ Encabezado
+    # =========================
+    # 1️⃣ ENCABEZADO
+    # =========================
     encabezado = pd.DataFrame({
         "Campo": ["Granja", "Tipo de Proceso", "Lotes", "Fecha de Generación"],
         "Valor": [
@@ -885,10 +888,17 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
             pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
         ]
     })
-    encabezado.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
+    encabezado.to_excel(
+        writer,
+        sheet_name=sheet_name,
+        index=False,
+        startrow=fila_actual
+    )
     fila_actual += len(encabezado) + 2
 
-    # 2️⃣ Configuración de lotes
+    # =========================
+    # 2️⃣ CONFIGURACIÓN DE LOTES
+    # =========================
     df_lotes = pd.DataFrame([
         {
             "Lote": l,
@@ -897,28 +907,84 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
         }
         for l in lotes
     ])
-    df_lotes.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
+    df_lotes.to_excel(
+        writer,
+        sheet_name=sheet_name,
+        index=False,
+        startrow=fila_actual
+    )
     fila_actual += len(df_lotes) + 3
 
-    # 3️⃣ Datos productivos
+    # =========================
+    # 3️⃣ DATOS PRODUCTIVOS
+    # =========================
     if tipo == "PRODUCCIÓN":
         df_prod_excel = pd.DataFrame(data_prod, index=lotes).T
-        df_prod_excel.to_excel(writer, sheet_name=sheet_name, startrow=fila_actual)
+        df_prod_excel.to_excel(
+            writer,
+            sheet_name=sheet_name,
+            index=True,
+            startrow=fila_actual
+        )
         fila_actual += len(df_prod_excel) + 3
-    else:
-        df_h.to_excel(writer, sheet_name=sheet_name, startrow=fila_actual)
+
+    else:  # LEVANTE
+        df_h.to_excel(
+            writer,
+            sheet_name=sheet_name,
+            index=True,
+            startrow=fila_actual
+        )
         fila_actual += len(df_h) + 3
 
-        df_m.to_excel(writer, sheet_name=sheet_name, startrow=fila_actual)
+        df_m.to_excel(
+            writer,
+            sheet_name=sheet_name,
+            index=True,
+            startrow=fila_actual
+        )
         fila_actual += len(df_m) + 3
 
-    # 4️⃣ Resumen por lote
-    resumen_lote.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
-    fila_actual += len(resumen_lote) + 2
+    # =========================
+    # 4️⃣ RESUMEN POR LOTE (RECALCULADO AQUÍ)
+    # =========================
+    pagos_cols = [c for c in df_final.columns if c.startswith("PAGO_")]
 
-    # 5️⃣ Resultado final por trabajador
-    df_final.to_excel(writer, sheet_name=sheet_name, index=False, startrow=fila_actual)
+    resumen_lote_excel = (
+        df_final[pagos_cols]
+        .sum()
+        .reset_index()
+        .rename(columns={"index": "Lote", 0: "Total S/"})
+    )
 
+    resumen_lote_excel["Lote"] = resumen_lote_excel["Lote"].str.replace("PAGO_", "")
+    total_general = resumen_lote_excel["Total S/"].sum()
+
+    resumen_lote_excel["% del total"] = (
+        resumen_lote_excel["Total S/"] / total_general * 100
+    ).round(2)
+
+    resumen_lote_excel.to_excel(
+        writer,
+        sheet_name=sheet_name,
+        index=False,
+        startrow=fila_actual
+    )
+    fila_actual += len(resumen_lote_excel) + 2
+
+    # =========================
+    # 5️⃣ RESULTADO FINAL POR TRABAJADOR
+    # =========================
+    df_final.to_excel(
+        writer,
+        sheet_name=sheet_name,
+        index=False,
+        startrow=fila_actual
+    )
+
+# =========================
+# 📥 BOTÓN DE DESCARGA
+# =========================
 st.download_button(
     "📥 Descargar archivo final",
     data=output.getvalue(),
@@ -1424,4 +1490,5 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
