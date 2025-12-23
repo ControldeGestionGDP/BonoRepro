@@ -340,6 +340,24 @@ def factor_faltas(f):
     return DESCUENTO_FALTAS.get(f, 0.50)
 
 # =========================
+# HELPER – LECTURA DE TABLAS INVERTIDAS (LEVANTE)
+# =========================
+def leer_bloque_invertido(raw, fila_inicio, fila_fin):
+    bloque = raw.iloc[fila_inicio:fila_fin].copy()
+
+    # Primera fila = encabezados (lotes)
+    header = bloque.iloc[0].astype(str).str.strip()
+
+    # Datos reales
+    bloque = bloque.iloc[1:]
+    bloque.columns = ["CAMPO"] + list(header[1:])
+
+    bloque["CAMPO"] = bloque["CAMPO"].astype(str).str.strip()
+    bloque = bloque.set_index("CAMPO")
+
+    return bloque
+
+# =========================
 # CARGA DE ARCHIVOS SEGÚN OPCIÓN
 # =========================
 df = None
@@ -370,10 +388,11 @@ if opcion_inicio == "➕ Iniciar desde cero":
         df_base = df_base.drop_duplicates("DNI")
 
         df = df_dni.merge(
-            df_base[["DNI","NOMBRE COMPLETO","CARGO"]],
+            df_base[["DNI", "NOMBRE COMPLETO", "CARGO"]],
             on="DNI",
             how="left"
         )
+
         st.success("✅ Cruce de trabajadores realizado")
 
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
@@ -427,14 +446,11 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
         config_lotes = {}
         for _, r in df_lotes.iterrows():
-
             if pd.isna(r["Lote"]):
                 continue
 
             try:
-                monto = float(
-                    str(r["Monto S/"]).replace(",", "").strip()
-                )
+                monto = float(str(r["Monto S/"]).replace(",", "").strip())
             except:
                 monto = 0.0
 
@@ -472,19 +488,11 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
             # ---- HEMBRAS ----
             inicio_h = raw[raw.iloc[:, 0] == "Edad"].index[0]
-            df_h = leer_bloque_invertido(
-                raw,
-                fila_inicio=inicio_h,
-                fila_fin=inicio_h + 8
-            )
+            df_h = leer_bloque_invertido(raw, inicio_h, inicio_h + 8)
 
             # ---- MACHOS ----
             inicio_m = inicio_h + 9
-            df_m = leer_bloque_invertido(
-                raw,
-                fila_inicio=inicio_m,
-                fila_fin=inicio_m + 7
-            )
+            df_m = leer_bloque_invertido(raw, inicio_m, inicio_m + 7)
 
             for lote in df_h.columns:
                 st.session_state.datos_productivos.setdefault(lote, {})
@@ -1560,4 +1568,5 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
