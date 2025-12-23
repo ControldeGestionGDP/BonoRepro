@@ -985,8 +985,103 @@ st.plotly_chart(fig_lote, use_container_width=True)
 
 # -------- TAB 1: PREVISUALIZAR --------
 with tab1:
-    st.markdown("### 💰 Resultado final completo")
+
+    st.markdown("## 📊 Previsualización integral del proceso")
+
+    # =========================
+    # DATOS PRODUCTIVOS
+    # =========================
+    st.markdown("### 🧬 Datos productivos")
+
+    if tipo == "PRODUCCIÓN":
+
+        campos_prod = {
+            "Etapa": "ETAPA",
+            "Edad (sem)": "EDAD_AVE",
+            "Huevos sem 41": "HUEVOS_SEM_41",
+            "Población inicial": "POBLACION_INICIAL",
+            "Huevos / AA": "HUEVOS_POR_AA",
+            "Huevos STD 41": "HUEVOS_STD_41",
+            "% Cumplimiento": "PCT_CUMPLIMIENTO",
+            "% Huevos bomba": "PCT_HUEVOS_BOMBA",
+        }
+
+        data_prod = {
+            campo: [
+                st.session_state.datos_productivos
+                .get(lote, {})
+                .get(key, "")
+                for lote in lotes
+            ]
+            for campo, key in campos_prod.items()
+        }
+
+        df_prod_prev = pd.DataFrame(data_prod, index=lotes).T
+        st.dataframe(df_prod_prev, use_container_width=True)
+
+    else:
+
+        # ---------- HEMBRAS ----------
+        st.markdown("#### ♀️ Levante – Hembras")
+
+        campos_h = {
+            "Edad": "EDAD",
+            "Uniformidad (%)": "UNIFORMIDAD",
+            "Aves entregadas": "AVES_ENTREGADAS",
+            "Población inicial": "POBLACION_INICIAL",
+            "% Cumpl. aves": "PCT_CUMP_AVES",
+            "Peso": "PESO",
+            "Peso STD": "PESO_STD",
+            "% Cumpl. peso": "PCT_CUMP_PESO",
+        }
+
+        data_h = {
+            campo: [
+                st.session_state.datos_productivos
+                .get(lote, {})
+                .get("HEMBRAS", {})
+                .get(key, "")
+                for lote in lotes
+            ]
+            for campo, key in campos_h.items()
+        }
+
+        df_h_prev = pd.DataFrame(data_h, index=lotes).T
+        st.dataframe(df_h_prev, use_container_width=True)
+
+        # ---------- MACHOS ----------
+        st.markdown("#### ♂️ Levante – Machos")
+
+        campos_m = {
+            "Edad": "EDAD",
+            "Uniformidad (%)": "UNIFORMIDAD",
+            "Aves entregadas": "AVES_ENTREGADAS",
+            "Población inicial": "POBLACION_INICIAL",
+            "Peso": "PESO",
+            "Peso STD": "PESO_STD",
+            "% Cumpl. peso": "PCT_CUMP_PESO",
+        }
+
+        data_m = {
+            campo: [
+                st.session_state.datos_productivos
+                .get(lote, {})
+                .get("MACHOS", {})
+                .get(key, "")
+                for lote in lotes
+            ]
+            for campo, key in campos_m.items()
+        }
+
+        df_m_prev = pd.DataFrame(data_m, index=lotes).T
+        st.dataframe(df_m_prev, use_container_width=True)
+
+    # =========================
+    # RESULTADO FINAL
+    # =========================
+    st.markdown("### 💰 Resultado final por trabajador")
     st.dataframe(df_final, use_container_width=True)
+
 
 # -------- TAB 2: ENVIAR POR CORREO --------
 with tab2:
@@ -1014,34 +1109,134 @@ with tab2:
                 msg["To"] = correo_destino
                 msg["Subject"] = asunto
 
+                # =========================
+                # TABLAS HTML
+                # =========================
                 tabla_lote_html = resumen_lote.to_html(
                     index=False,
                     border=1,
                     justify="center"
                 )
 
-                tabla_html = df_final.to_html(
+                tabla_resultado_html = df_final.to_html(
                     index=False,
                     border=1,
                     justify="center"
                 )
 
+                # =========================
+                # DATOS PRODUCTIVOS HTML
+                # =========================
+                if tipo == "PRODUCCIÓN":
+
+                    campos_prod = {
+                        "Etapa": "ETAPA",
+                        "Edad (sem)": "EDAD_AVE",
+                        "Huevos sem 41": "HUEVOS_SEM_41",
+                        "Población inicial": "POBLACION_INICIAL",
+                        "Huevos / AA": "HUEVOS_POR_AA",
+                        "Huevos STD 41": "HUEVOS_STD_41",
+                        "% Cumplimiento": "PCT_CUMPLIMIENTO",
+                        "% Huevos bomba": "PCT_HUEVOS_BOMBA",
+                    }
+
+                    data_prod = {
+                        campo: [
+                            st.session_state.datos_productivos
+                            .get(lote, {})
+                            .get(key, "")
+                            for lote in lotes
+                        ]
+                        for campo, key in campos_prod.items()
+                    }
+
+                    df_prod_mail = pd.DataFrame(data_prod, index=lotes).T
+
+                    bloque_productivo_html = f"""
+                    <h3>🏭 Datos productivos – Producción</h3>
+                    {df_prod_mail.to_html(index=True, border=1, justify="center")}
+                    """
+
+                else:
+                    # ---------- HEMBRAS ----------
+                    campos_h = {
+                        "Edad": "EDAD",
+                        "Uniformidad (%)": "UNIFORMIDAD",
+                        "Aves entregadas": "AVES_ENTREGADAS",
+                        "Población inicial": "POBLACION_INICIAL",
+                        "% Cumpl. aves": "PCT_CUMP_AVES",
+                        "Peso": "PESO",
+                        "Peso STD": "PESO_STD",
+                        "% Cumpl. peso": "PCT_CUMP_PESO",
+                    }
+
+                    data_h = {
+                        campo: [
+                            st.session_state.datos_productivos
+                            .get(lote, {})
+                            .get("HEMBRAS", {})
+                            .get(key, "")
+                            for lote in lotes
+                        ]
+                        for campo, key in campos_h.items()
+                    }
+
+                    df_h_mail = pd.DataFrame(data_h, index=lotes).T
+
+                    # ---------- MACHOS ----------
+                    campos_m = {
+                        "Edad": "EDAD",
+                        "Uniformidad (%)": "UNIFORMIDAD",
+                        "Aves entregadas": "AVES_ENTREGADAS",
+                        "Población inicial": "POBLACION_INICIAL",
+                        "Peso": "PESO",
+                        "Peso STD": "PESO_STD",
+                        "% Cumpl. peso": "PCT_CUMP_PESO",
+                    }
+
+                    data_m = {
+                        campo: [
+                            st.session_state.datos_productivos
+                            .get(lote, {})
+                            .get("MACHOS", {})
+                            .get(key, "")
+                            for lote in lotes
+                        ]
+                        for campo, key in campos_m.items()
+                    }
+
+                    df_m_mail = pd.DataFrame(data_m, index=lotes).T
+
+                    bloque_productivo_html = f"""
+                    <h3>🐔 Datos productivos – Levante (Hembras)</h3>
+                    {df_h_mail.to_html(index=True, border=1, justify="center")}
+
+                    <h3>🐔 Datos productivos – Levante (Machos)</h3>
+                    {df_m_mail.to_html(index=True, border=1, justify="center")}
+                    """
+
+                # =========================
+                # CUERPO DEL CORREO
+                # =========================
                 cuerpo_html = f"""
                 <html>
                     <body>
                         <h2>Bono Reproductoras GDP</h2>
+
                         <p><strong>Granja:</strong> {st.session_state.get("granja_seleccionada","")}</p>
                         <p><strong>Tipo de proceso:</strong> {tipo}</p>
                         <p><strong>Lotes:</strong> {", ".join(lotes)}</p>
                         <p><strong>Fecha:</strong> {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}</p>
 
+                        {bloque_productivo_html}
+
                         <h3>📦 Resumen por lote</h3>
                         {tabla_lote_html}
 
                         <h3>💰 Resultado final por trabajador</h3>
-                        {tabla_html}
+                        {tabla_resultado_html}
 
-                        <p>Adjunto se envía el archivo Excel.</p>
+                        <p>{mensaje}</p>
                         <p><strong>Equipo de Control de Gestión</strong></p>
                     </body>
                 </html>
