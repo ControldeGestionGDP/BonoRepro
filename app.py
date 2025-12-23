@@ -546,288 +546,152 @@ if "datos_productivos" not in st.session_state:
     st.session_state.datos_productivos = {}
 
 # =========================
-# ETAPA Y DATOS PRODUCTIVOS (PRODUCCIÓN POR LOTE)
+# ETAPA Y DATOS PRODUCTIVOS (PRODUCCIÓN - TABLA)
 # =========================
 if tipo == "PRODUCCIÓN":
 
-    st.subheader("🏭 Información productiva – Producción (por lote)")
+    st.subheader("🏭 Información productiva – Producción")
 
+    filas = []
     for lote in lotes:
-        st.markdown(f"### 🧬 Lote {lote}")
+        d = st.session_state.datos_productivos.get(lote, {})
+        filas.append({
+            "Lote": lote,
+            "Etapa": d.get("ETAPA", "Primera etapa"),
+            "Edad (sem)": d.get("EDAD_AVE", 0),
+            "Huevos sem 41": d.get("HUEVOS_SEM_41", 0),
+            "Población inicial": d.get("POBLACION_INICIAL", 0),
+            "Huevos / AA": d.get("HUEVOS_POR_AA", 0.0),
+            "Huevos STD 41": d.get("HUEVOS_STD_41", 0),
+            "% Cumplimiento": d.get("PCT_CUMPLIMIENTO", 0.0),
+            "% Huevos bomba": d.get("PCT_HUEVOS_BOMBA", 0.0),
+        })
 
-        datos = st.session_state.datos_productivos.get(lote, {})
+    df_prod = pd.DataFrame(filas)
 
-        etapa = st.radio(
-            "Etapa de Producción",
-            ["Primera etapa", "Segunda etapa"],
-            horizontal=True,
-            key=f"etapa_{lote}",
-            index=0 if datos.get("ETAPA") != "Segunda etapa" else 1
-        )
+    df_edit = st.data_editor(
+        df_prod,
+        use_container_width=True,
+        num_rows="fixed",
+        column_config={
+            "Etapa": st.column_config.SelectboxColumn(
+                options=["Primera etapa", "Segunda etapa"]
+            ),
+            "% Cumplimiento": st.column_config.NumberColumn(
+                min_value=0.0, max_value=100.0, format="%.2f"
+            ),
+            "% Huevos bomba": st.column_config.NumberColumn(
+                min_value=0.0, max_value=100.0, format="%.2f"
+            ),
+        }
+    )
 
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            edad_ave = st.number_input(
-                "Edad del ave (semanas)",
-                min_value=0,
-                step=1,
-                key=f"edad_{lote}",
-                value=datos.get("EDAD_AVE", 0)
-            )
-
-            huevos_sem_41 = st.number_input(
-                "Huevos hasta sem. 41",
-                min_value=0,
-                step=1,
-                key=f"h41_{lote}",
-                value=datos.get("HUEVOS_SEM_41", 0)
-            )
-
-            poblacion_inicial = st.number_input(
-                "Población Inicial Prod",
-                min_value=0,
-                step=1,
-                key=f"pob_{lote}",
-                value=datos.get("POBLACION_INICIAL", 0)
-            )
-
-        with col2:
-            huevos_por_aa = st.number_input(
-                "H. Prod / AA",
-                min_value=0.0,
-                step=0.01,
-                key=f"haa_{lote}",
-                value=datos.get("HUEVOS_POR_AA", 0.0)
-            )
-
-            huevos_std_41 = st.number_input(
-                "Huevos STD (41 sem)",
-                min_value=0,
-                step=1,
-                key=f"std41_{lote}",
-                value=datos.get("HUEVOS_STD_41", 0)
-            )
-
-            pct_cumplimiento = st.number_input(
-                "% Cumplimiento",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.1,
-                key=f"cumpl_{lote}",
-                value=datos.get("PCT_CUMPLIMIENTO", 0.0),
-                format="%.2f"
-            )
-
-        with col3:
-            pct_huevos_bomba = st.number_input(
-                "% Huevos Bomba",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.1,
-                key=f"bomba_{lote}",
-                value=datos.get("PCT_HUEVOS_BOMBA", 0.0),
-                format="%.2f"
-            )
-
-            st.text_input("Validación", value="CERRADO", disabled=True, key=f"val_{lote}")
-
-        # ✅ Guardar POR LOTE
-        st.session_state.datos_productivos[lote] = {
-            "ETAPA": etapa,
-            "EDAD_AVE": edad_ave,
-            "HUEVOS_SEM_41": huevos_sem_41,
-            "POBLACION_INICIAL": poblacion_inicial,
-            "HUEVOS_POR_AA": huevos_por_aa,
-            "HUEVOS_STD_41": huevos_std_41,
-            "PCT_CUMPLIMIENTO": pct_cumplimiento,
-            "PCT_HUEVOS_BOMBA": pct_huevos_bomba,
+    # 🔐 Guardar nuevamente en session_state (por lote)
+    for _, r in df_edit.iterrows():
+        st.session_state.datos_productivos[r["Lote"]] = {
+            "ETAPA": r["Etapa"],
+            "EDAD_AVE": int(r["Edad (sem)"]),
+            "HUEVOS_SEM_41": int(r["Huevos sem 41"]),
+            "POBLACION_INICIAL": int(r["Población inicial"]),
+            "HUEVOS_POR_AA": float(r["Huevos / AA"]),
+            "HUEVOS_STD_41": int(r["Huevos STD 41"]),
+            "PCT_CUMPLIMIENTO": float(r["% Cumplimiento"]),
+            "PCT_HUEVOS_BOMBA": float(r["% Huevos bomba"]),
             "VALIDACION": "CERRADO"
         }
 
+
 # =========================
-# DATOS PRODUCTIVOS – LEVANTE (POR LOTE)
+# DATOS PRODUCTIVOS – LEVANTE (TABLAS)
 # =========================
 if tipo == "LEVANTE":
 
-    st.subheader("🐔 Información productiva – Levante (por lote)")
+    st.subheader("🐔 Información productiva – Levante")
 
+    # =====================================================
+    # ♀️ HEMBRAS – TABLA
+    # =====================================================
+    st.markdown("### ♀️ Hembras")
+
+    filas_h = []
     for lote in lotes:
-        st.markdown(f"## 🧬 Lote {lote}")
+        d = st.session_state.datos_productivos.get(lote, {}).get("HEMBRAS", {})
+        filas_h.append({
+            "Lote": lote,
+            "Edad": d.get("EDAD", 0),
+            "Uniformidad (%)": d.get("UNIFORMIDAD", 0.0),
+            "Aves entregadas": d.get("AVES_ENTREGADAS", 0),
+            "Población inicial": d.get("POBLACION_INICIAL", 0),
+            "% Cumpl. aves": d.get("PCT_CUMP_AVES", 0.0),
+            "Peso": d.get("PESO", 0.0),
+            "Peso STD": d.get("PESO_STD", 2.53),
+            "% Cumpl. peso": d.get("PCT_CUMP_PESO", 0.0),
+        })
 
-        datos = st.session_state.datos_productivos.get(lote, {})
+    df_h = st.data_editor(
+        pd.DataFrame(filas_h),
+        use_container_width=True,
+        num_rows="fixed",
+        column_config={
+            "Uniformidad (%)": st.column_config.NumberColumn(min_value=0.0, max_value=100.0),
+            "% Cumpl. aves": st.column_config.NumberColumn(min_value=0.0, max_value=100.0),
+            "% Cumpl. peso": st.column_config.NumberColumn(format="%.2f"),
+        }
+    )
 
-        # =========================
-        # HEMBRAS
-        # =========================
-        st.markdown("### ♀️ Hembras")
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            edad_hembra = st.number_input(
-                "Edad ave al entregar a Prod (Hembras)",
-                min_value=0,
-                step=1,
-                key=f"edad_h_{lote}",
-                value=datos.get("HEMBRAS", {}).get("EDAD", 0)
-            )
-
-            uniformidad_hembras = st.number_input(
-                "Uniformidad Hembras (%)",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.1,
-                format="%.2f",
-                key=f"unif_h_{lote}",
-                value=datos.get("HEMBRAS", {}).get("UNIFORMIDAD", 0.0)
-            )
-
-            nro_aves_entregadas_h = st.number_input(
-                "Nro Aves Entregadas a Prod (Hembras)",
-                min_value=0,
-                step=1,
-                key=f"aves_h_{lote}",
-                value=datos.get("HEMBRAS", {}).get("AVES_ENTREGADAS", 0)
-            )
-
-        with col2:
-            poblacion_inicial_h = st.number_input(
-                "Población Inicial (Hembras)",
-                min_value=0,
-                step=1,
-                key=f"pob_h_{lote}",
-                value=datos.get("HEMBRAS", {}).get("POBLACION_INICIAL", 0)
-            )
-
-            pct_cumpl_aves_h = st.number_input(
-                "% CUMP. Aves Entregadas (Hembras)",
-                step=0.1,
-                format="%.2f",
-                key=f"cump_aves_h_{lote}",
-                value=datos.get("HEMBRAS", {}).get("PCT_CUMP_AVES", 0.0)
-            )
-
-        with col3:
-            peso_entrega_h = st.number_input(
-                "Peso Ave al entregar a Prod (Hembras)",
-                min_value=0.0,
-                step=0.001,
-                format="%.3f",
-                key=f"peso_h_{lote}",
-                value=datos.get("HEMBRAS", {}).get("PESO", 0.0)
-            )
-
-            peso_std_h = st.number_input(
-                "Peso Ave al entregar a Prod STD (Hembras)",
-                value=2.53,
-                step=0.001,
-                format="%.3f",
-                key=f"peso_std_h_{lote}"
-            )
-
-            pct_cumpl_peso_h = st.number_input(
-                "% CUMP. PESO (Hembras)",
-                step=0.1,
-                format="%.2f",
-                key=f"cump_peso_h_{lote}",
-                value=datos.get("HEMBRAS", {}).get("PCT_CUMP_PESO", 0.0)
-            )
-
-        # =========================
-        # MACHOS
-        # =========================
-        st.markdown("### ♂️ Machos")
-
-        col4, col5, col6 = st.columns(3)
-
-        with col4:
-            edad_macho = st.number_input(
-                "Edad ave al entregar a Prod (Machos)",
-                min_value=0,
-                step=1,
-                key=f"edad_m_{lote}",
-                value=datos.get("MACHOS", {}).get("EDAD", 0)
-            )
-
-            uniformidad_machos = st.number_input(
-                "Uniformidad Machos (%)",
-                min_value=0.0,
-                max_value=100.0,
-                step=0.1,
-                format="%.2f",
-                key=f"unif_m_{lote}",
-                value=datos.get("MACHOS", {}).get("UNIFORMIDAD", 0.0)
-            )
-
-            nro_aves_entregadas_m = st.number_input(
-                "Nro Aves Entregadas a Prod (Machos)",
-                min_value=0,
-                step=1,
-                key=f"aves_m_{lote}",
-                value=datos.get("MACHOS", {}).get("AVES_ENTREGADAS", 0)
-            )
-
-        with col5:
-            poblacion_inicial_m = st.number_input(
-                "Población Inicial (Machos)",
-                min_value=0,
-                step=1,
-                key=f"pob_m_{lote}",
-                value=datos.get("MACHOS", {}).get("POBLACION_INICIAL", 0)
-            )
-
-        with col6:
-            peso_entrega_m = st.number_input(
-                "Peso Ave al entregar a Prod (Machos)",
-                min_value=0.0,
-                step=0.001,
-                format="%.3f",
-                key=f"peso_m_{lote}",
-                value=datos.get("MACHOS", {}).get("PESO", 0.0)
-            )
-
-            peso_std_m = st.number_input(
-                "Peso Ave al entregar a Prod STD (Machos)",
-                value=2.955,
-                step=0.001,
-                format="%.3f",
-                key=f"peso_std_m_{lote}"
-            )
-
-            pct_cumpl_peso_m = st.number_input(
-                "% CUMP. PESO (Machos)",
-                step=0.1,
-                format="%.2f",
-                key=f"cump_peso_m_{lote}",
-                value=datos.get("MACHOS", {}).get("PCT_CUMP_PESO", 0.0)
-            )
-
-        # =========================
-        # GUARDAR POR LOTE
-        # =========================
-        st.session_state.datos_productivos[lote] = {
-            "HEMBRAS": {
-                "EDAD": edad_hembra,
-                "UNIFORMIDAD": uniformidad_hembras,
-                "AVES_ENTREGADAS": nro_aves_entregadas_h,
-                "POBLACION_INICIAL": poblacion_inicial_h,
-                "PCT_CUMP_AVES": pct_cumpl_aves_h,
-                "PESO": peso_entrega_h,
-                "PESO_STD": peso_std_h,
-                "PCT_CUMP_PESO": pct_cumpl_peso_h
-            },
-            "MACHOS": {
-                "EDAD": edad_macho,
-                "UNIFORMIDAD": uniformidad_machos,
-                "AVES_ENTREGADAS": nro_aves_entregadas_m,
-                "POBLACION_INICIAL": poblacion_inicial_m,
-                "PESO": peso_entrega_m,
-                "PESO_STD": peso_std_m,
-                "PCT_CUMP_PESO": pct_cumpl_peso_m
-            }
+    # Guardar HEMBRAS
+    for _, r in df_h.iterrows():
+        st.session_state.datos_productivos.setdefault(r["Lote"], {})["HEMBRAS"] = {
+            "EDAD": int(r["Edad"]),
+            "UNIFORMIDAD": float(r["Uniformidad (%)"]),
+            "AVES_ENTREGADAS": int(r["Aves entregadas"]),
+            "POBLACION_INICIAL": int(r["Población inicial"]),
+            "PCT_CUMP_AVES": float(r["% Cumpl. aves"]),
+            "PESO": float(r["Peso"]),
+            "PESO_STD": float(r["Peso STD"]),
+            "PCT_CUMP_PESO": float(r["% Cumpl. peso"]),
         }
 
+    # =====================================================
+    # ♂️ MACHOS – TABLA
+    # =====================================================
+    st.markdown("### ♂️ Machos")
+
+    filas_m = []
+    for lote in lotes:
+        d = st.session_state.datos_productivos.get(lote, {}).get("MACHOS", {})
+        filas_m.append({
+            "Lote": lote,
+            "Edad": d.get("EDAD", 0),
+            "Uniformidad (%)": d.get("UNIFORMIDAD", 0.0),
+            "Aves entregadas": d.get("AVES_ENTREGADAS", 0),
+            "Población inicial": d.get("POBLACION_INICIAL", 0),
+            "Peso": d.get("PESO", 0.0),
+            "Peso STD": d.get("PESO_STD", 2.955),
+            "% Cumpl. peso": d.get("PCT_CUMP_PESO", 0.0),
+        })
+
+    df_m = st.data_editor(
+        pd.DataFrame(filas_m),
+        use_container_width=True,
+        num_rows="fixed",
+        column_config={
+            "Uniformidad (%)": st.column_config.NumberColumn(min_value=0.0, max_value=100.0),
+            "% Cumpl. peso": st.column_config.NumberColumn(format="%.2f"),
+        }
+    )
+
+    # Guardar MACHOS
+    for _, r in df_m.iterrows():
+        st.session_state.datos_productivos.setdefault(r["Lote"], {})["MACHOS"] = {
+            "EDAD": int(r["Edad"]),
+            "UNIFORMIDAD": float(r["Uniformidad (%)"]),
+            "AVES_ENTREGADAS": int(r["Aves entregadas"]),
+            "POBLACION_INICIAL": int(r["Población inicial"]),
+            "PESO": float(r["Peso"]),
+            "PESO_STD": float(r["Peso STD"]),
+            "PCT_CUMP_PESO": float(r["% Cumpl. peso"]),
+        }
 
 
 # Configuración por lote
@@ -1179,6 +1043,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
