@@ -1082,6 +1082,32 @@ with tab1:
     st.markdown("### 💰 Resultado final por trabajador")
     st.dataframe(df_final, use_container_width=True)
 
+def tabla_html_limpia(df, decimales_por_fila=None):
+    df_fmt = df.copy()
+
+    if decimales_por_fila:
+        for fila, dec in decimales_por_fila.items():
+            if fila in df_fmt.index:
+                df_fmt.loc[fila] = (
+                    pd.to_numeric(df_fmt.loc[fila], errors="coerce")
+                    .round(dec)
+                )
+
+    html = df_fmt.to_html(
+        index=True,
+        border=1
+    )
+
+    # Estilo: alineación izquierda y sin decimales innecesarios
+    html = html.replace(
+        "<table",
+        "<table style='border-collapse:collapse; text-align:left;'"
+    )
+
+    html = html.replace("<th>", "<th style='text-align:left; padding:6px;'>")
+    html = html.replace("<td>", "<td style='text-align:right; padding:6px;'>")
+
+    return html
 
 # -------- TAB 2: ENVIAR POR CORREO --------
 with tab2:
@@ -1295,6 +1321,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
