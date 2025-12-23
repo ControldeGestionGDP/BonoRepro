@@ -889,15 +889,33 @@ if "config_lotes" not in st.session_state:
 config_lotes = st.session_state.config_lotes
 cols = st.columns(len(lotes))
 
+st.subheader("🧬 Configuración por lote")
+
+if "config_lotes" not in st.session_state:
+    st.session_state.config_lotes = {}
+
+config_lotes = st.session_state.config_lotes
+cols = st.columns(len(lotes))
+
 for i, lote in enumerate(lotes):
     with cols[i]:
-        valor_gen = config_lotes.get(lote, {}).get("GENETICA", "ROSS")
+
+        # Valores base (desde Excel o por defecto)
+        valor_gen = str(config_lotes.get(lote, {}).get("GENETICA", "ROSS"))
         valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 1000.0))
+
+        key_gen = f"gen_{lote}_v2"
+        key_monto = f"monto_{lote}_v2"
+
+        # 🔑 SOLO si viene desde Excel → sincronizar UNA VEZ
+        if st.session_state.get("cargado_desde_excel", False):
+            st.session_state[key_gen] = valor_gen
+            st.session_state[key_monto] = valor_monto
 
         genetica = st.text_input(
             f"Genética - Lote {lote}",
             value=valor_gen,
-            key=f"gen_{lote}_v2"
+            key=key_gen
         )
 
         monto = st.number_input(
@@ -905,15 +923,22 @@ for i, lote in enumerate(lotes):
             min_value=0.0,
             value=valor_monto,
             step=50.0,
-            key=f"monto_{lote}_v2"
+            key=key_monto
         )
 
+        # Guardar en config_lotes
         config_lotes[lote] = {
             "GENETICA": genetica.upper(),
             "MONTO": monto
         }
 
+# Guardar en session_state
 st.session_state.config_lotes = config_lotes
+
+# 🔒 Apagar el flag después de pintar
+if st.session_state.get("cargado_desde_excel", False):
+    st.session_state.cargado_desde_excel = False
+
 
 # SESSION STATE tabla
 if "tabla" not in st.session_state:
@@ -1605,6 +1630,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
