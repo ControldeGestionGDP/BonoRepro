@@ -129,16 +129,20 @@ if st.session_state.ingresar and st.session_state.ver_manual:
 
     st.markdown("## 📘 Manual de Uso – Bono Reproductoras GDP")
 
-    # 🔴 REQUISITO PREVIO OBLIGATORIO
-    st.warning(
-        "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
-        "Antes de iniciar el cálculo del bono, es indispensable coordinar con el equipo de "
-        "**Control de Gestión**.\n\n"
-        "**Ellos deben realizar previamente:**\n"
-        "• El registro de **Huevos Bomba** (si aplica)\n"
-        "• La definición de los **montos base por granja y por lote**\n\n"
-        "El sistema asume que esta información ya fue validada oficialmente."
-    )
+   # 🔴 REQUISITO PREVIO OBLIGATORIO
+st.warning(
+    "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
+    "Antes de iniciar el cálculo del bono, se debe coordinar previamente con el "
+    "**equipo de Control de Gestión (CDG)**.\n\n"
+    "**Paso obligatorio:**\n"
+    "• Completar todos los campos del sistema y **enviar la información al equipo CDG para su validación**.\n"
+    "• CDG validará los datos productivos (Huevos Bomba, % de Cumplimiento, entre otros indicadores).\n\n"
+    "**Correo de validación:**\n"
+    "📧 humbertoatoche@donpollo.pe\n"
+    "📧 galapi@donpollo.pe\n\n"
+    "• Asimismo, se valida la **definición de los montos base por granja y por lote**.\n\n"
+    "El sistema asume que esta información ya fue revisada y validada oficialmente por CDG."
+)
 
     st.markdown("""
     ---
@@ -1511,6 +1515,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
