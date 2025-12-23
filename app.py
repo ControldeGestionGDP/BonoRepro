@@ -983,6 +983,16 @@ with pd.ExcelWriter(output, engine="openpyxl") as writer:
     )
 
 # =========================
+# 🏷️ NOMBRE DEL ARCHIVO
+# =========================
+nombre_archivo = (
+    f"Bono_Reproductoras_"
+    f"{st.session_state.get('granja_seleccionada','NA').replace(' ','')}_"
+    f"{tipo}_"
+    f"{pd.Timestamp.now():%Y%m%d_%H%M}.xlsx"
+)
+
+# =========================
 # 📥 BOTÓN DE DESCARGA
 # =========================
 st.download_button(
@@ -1490,5 +1500,6 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
