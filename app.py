@@ -132,61 +132,140 @@ if st.session_state.ingresar and st.session_state.ver_manual:
     # 🔴 REQUISITO PREVIO OBLIGATORIO
     st.warning(
         "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
-        "**Antes de iniciar en el sistema:**\n"
-        "Al cerrar una granja, comuníquese con el equipo de **Control de Gestión**.\n\n"
+        "Antes de iniciar el cálculo del bono, es indispensable coordinar con el equipo de "
+        "**Control de Gestión**.\n\n"
         "**Ellos deben realizar previamente:**\n"
-        "• El ingreso de los **Huevos Bomba**\n"
-        "• La definición de los **montos base por granja y lote**\n\n"
-        "Solo después de este paso se debe proceder con el cálculo individual."
+        "• El registro de **Huevos Bomba** (si aplica)\n"
+        "• La definición de los **montos base por granja y por lote**\n\n"
+        "El sistema asume que esta información ya fue validada oficialmente."
     )
 
     st.markdown("""
     ---
 
-    ### 🚀 Guía de Uso del Sistema
+    ## 🚀 Guía de Uso del Sistema
 
-    #### 1️⃣ Acceso e Inicio
-    Al ingresar a la aplicación encontrará dos opciones:
+    ### 1️⃣ Ingreso al sistema
+    Una vez autenticado, podrá elegir cómo iniciar el proceso:
 
     - **➕ Iniciar desde cero**  
-      Use esta opción si es la primera vez que procesa el bono del periodo.
+      Utilice esta opción cuando el bono del periodo aún no ha sido trabajado.
 
     - **📂 Cargar Excel previamente generado**  
-      Ideal para continuar un trabajo guardado o corregir un archivo descargado.
+      Ideal para continuar, corregir o validar un archivo descargado anteriormente desde el sistema.
 
-    #### 2️⃣ Carga de Datos (inicio desde cero)
-    Deberá subir dos archivos Excel obligatorios:
-
-    - **Excel con DNIs:** listado del personal participante  
-    - **Base de trabajadores:** maestro general de personal  
-
-    👉 El sistema realiza un **cruce automático** para validar nombres y cargos.
-
-    #### 3️⃣ Configuración de Granja y Lotes
-    - Seleccione la **Granja**
-    - Defina el **Tipo de Proceso** (PRODUCCIÓN o LEVANTE)
-    - Ingrese los **Lotes** (ejemplo: 211-212-213)
-    - Confirme los datos para desbloquear el sistema
-
-    #### 4️⃣ Configuración Económica y Genética
-    Para cada lote:
-    - **Genética:** por defecto ROSS
-    - **Monto S/:** monto total asignado (habilitado por Control de Gestión)
-
-    #### 5️⃣ Gestión de Personal
-    - Agregar o eliminar trabajadores por DNI
-    - Registrar:
-        - **P_[Lote]:** porcentaje de participación
-        - **F_[Lote]:** faltas (con descuento automático)
-
-    💡 **Importante:** siempre presione **💾 Actualizar tabla** luego de editar.
-
-    #### 6️⃣ Resultados y Exportación
-    - Tabla final de pagos
-    - Gráficos de distribución
-    - Descarga de Excel con formato oficial
-    - Envío automático por correo corporativo
     ---
+
+    ### 2️⃣ Carga de información base
+    Dependiendo de la opción elegida:
+
+    **Si inicia desde cero**, deberá cargar:
+    - 📄 **Excel con DNIs** del personal participante  
+    - 📊 **Base de trabajadores** (maestro oficial)
+
+    El sistema realiza automáticamente:
+    - Normalización de DNIs  
+    - Cruce de nombres y cargos  
+    - Validación de duplicados  
+
+    ---
+
+    ### 3️⃣ Configuración inicial del proceso
+    En esta etapa deberá definir:
+
+    - 🏡 **Granja**
+    - 🔀 **Tipo de proceso**:  
+        - **PRODUCCIÓN** → indicadores productivos (huevos, cumplimiento, huevos bomba)  
+        - **LEVANTE** → indicadores por **Hembras** y **Machos**
+    - 🏷️ **Lotes** (ejemplo: 211-212-213)
+
+    ⚠️ Una vez confirmados estos datos, **no se recomienda modificarlos**, ya que afectan los registros ingresados.
+
+    ---
+
+    ### 4️⃣ Ingreso de datos productivos
+    Según el tipo de proceso seleccionado:
+
+    #### 🏭 PRODUCCIÓN
+    Se ingresan datos como:
+    - Etapa
+    - Edad
+    - Huevos semana 41
+    - Huevos STD
+    - % de cumplimiento
+    - % de huevos bomba
+
+    #### 🐔 LEVANTE
+    Se registran datos por separado para:
+    - ♀️ **Hembras**
+    - ♂️ **Machos**
+
+    Incluyendo:
+    - Edad
+    - Uniformidad
+    - Peso real
+    - Peso estándar
+    - % de cumplimiento
+
+    💾 **Importante:** siempre presione el botón **Guardar** luego de ingresar o modificar datos.
+
+    ---
+
+    ### 5️⃣ Configuración económica por lote
+    Para cada lote se define:
+    - 🧬 **Genética**
+    - 💰 **Monto total asignado (S/)**
+
+    Estos montos son utilizados como base para el cálculo del bono.
+
+    ---
+
+    ### 6️⃣ Gestión de trabajadores
+    En esta sección podrá:
+
+    - ➕ Agregar trabajadores por DNI
+    - ➖ Eliminar trabajadores
+    - Registrar por cada lote:
+        - **P_[Lote]** → Porcentaje de participación
+        - **F_[Lote]** → Faltas injustificadas
+
+    🔎 El sistema aplica automáticamente:
+    - Reglas por cargo
+    - Factores de descuento por faltas
+
+    💾 No olvide presionar **Actualizar tabla** después de editar.
+
+    ---
+
+    ### 7️⃣ Resultados y validación
+    El sistema genera automáticamente:
+
+    - 💰 **Resultado final por trabajador**
+    - 📦 **Resumen de pago por lote**
+    - 📊 **Gráfica de distribución del bono por lote**
+
+    En la pestaña **📊 Previsualizar resultado** podrá validar toda la información antes de exportar o enviar.
+
+    ---
+
+    ### 8️⃣ Exportación y envío
+    Finalmente podrá:
+
+    - 📥 **Descargar el Excel oficial** con:
+        - Encabezado del proceso
+        - Datos productivos
+        - Resumen por lote
+        - Resultado final por trabajador
+
+    - 📧 **Enviar el resultado por correo corporativo**, incluyendo:
+        - Datos productivos
+        - Resumen por lote
+        - Detalle de pagos
+        - Archivo Excel adjunto
+
+    ---
+
+    ✔️ **Este flujo garantiza trazabilidad, control y consistencia con los reportes oficiales.**
     """)
 
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -196,6 +275,7 @@ if st.session_state.ingresar and st.session_state.ver_manual:
             st.rerun()
 
     st.stop()
+
 
 # =========================
 # BARRA LATERAL – POWER BI
@@ -1431,6 +1511,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
