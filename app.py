@@ -576,6 +576,9 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         st.session_state.lotes = lotes
         st.session_state.tipo = tipo
 
+        # 🔑 FLAG CLAVE
+        st.session_state.cargado_desde_excel = True
+
         st.success("✅ Excel cargado y reconstruido correctamente")
 
 
@@ -905,14 +908,14 @@ cols = st.columns(len(lotes))
 for i, lote in enumerate(lotes):
     with cols[i]:
 
-        # Valores base (desde Excel o por defecto)
-        valor_gen = str(config_lotes.get(lote, {}).get("GENETICA", "ROSS"))
-        valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 1000.0))
-
         key_gen = f"gen_{lote}_v2"
         key_monto = f"monto_{lote}_v2"
 
-        # 🔑 Sincronizar SOLO una vez si vino del Excel
+        # Valores desde config_lotes
+        valor_gen = str(config_lotes.get(lote, {}).get("GENETICA", "ROSS"))
+        valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 0.0))
+
+        # 🔑 PRECARGA SOLO UNA VEZ (Excel)
         if st.session_state.get("cargado_desde_excel", False):
             st.session_state[key_gen] = valor_gen
             st.session_state[key_monto] = valor_monto
@@ -929,17 +932,18 @@ for i, lote in enumerate(lotes):
             key=key_monto
         )
 
+        # Guardar siempre lo que esté en pantalla
         config_lotes[lote] = {
-            "GENETICA": genetica.upper(),
+            "GENETICA": genetica.upper() if genetica else "ROSS",
             "MONTO": monto
         }
 
-# Guardar en session_state
 st.session_state.config_lotes = config_lotes
 
-# 🔒 Apagar el flag luego de la primera carga
+# 🔒 Apagar flag luego del primer render
 if st.session_state.get("cargado_desde_excel", False):
     st.session_state.cargado_desde_excel = False
+
 
 # SESSION STATE tabla
 if "tabla" not in st.session_state:
@@ -1631,6 +1635,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
