@@ -352,10 +352,19 @@ def leer_bloque_invertido(raw, fila_inicio, fila_fin):
     bloque = bloque.iloc[1:]
     bloque.columns = ["CAMPO"] + list(header[1:])
 
-    bloque["CAMPO"] = bloque["CAMPO"].astype(str).str.strip()
+    # 🔑 NORMALIZACIÓN CRÍTICA
+    bloque["CAMPO"] = (
+        bloque["CAMPO"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+        .str.replace("\xa0", " ", regex=False)
+    )
+
     bloque = bloque.set_index("CAMPO")
 
     return bloque
+
 
 # =========================
 # CARGA DE ARCHIVOS SEGÚN OPCIÓN
@@ -417,7 +426,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         # =========================
         encabezado = raw.iloc[0:4, 0:2].copy()
         encabezado.columns = ["CAMPO", "VALOR"]
-        encabezado["CAMPO"] = encabezado["CAMPO"].str.upper().str.strip()
+        encabezado["CAMPO"] = encabezado["CAMPO"].astype(str).str.upper().str.strip()
 
         st.session_state.granja_seleccionada = encabezado.loc[
             encabezado["CAMPO"] == "GRANJA", "VALOR"
@@ -495,27 +504,30 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
             df_m = leer_bloque_invertido(raw, inicio_m, inicio_m + 7)
 
             for lote in df_h.columns:
+
                 st.session_state.datos_productivos.setdefault(lote, {})
 
+                # ♀️ HEMBRAS
                 st.session_state.datos_productivos[lote]["HEMBRAS"] = {
-                    "EDAD": float(df_h.loc["Edad", lote]),
-                    "UNIFORMIDAD": float(df_h.loc["Uniformidad (%)", lote]),
-                    "AVES_ENTREGADAS": float(df_h.loc["Aves entregadas", lote]),
-                    "POBLACION_INICIAL": float(df_h.loc["Población inicial", lote]),
-                    "PCT_CUMP_AVES": float(df_h.loc["% Cumpl. aves", lote]),
-                    "PESO": float(df_h.loc["Peso", lote]),
-                    "PESO_STD": float(df_h.loc["Peso STD", lote]),
-                    "PCT_CUMP_PESO": float(df_h.loc["% Cumpl. peso", lote]),
+                    "EDAD": float(df_h.loc["EDAD", lote]),
+                    "UNIFORMIDAD": float(df_h.loc["UNIFORMIDAD (%)", lote]),
+                    "AVES_ENTREGADAS": float(df_h.loc["AVES ENTREGADAS", lote]),
+                    "POBLACION_INICIAL": float(df_h.loc["POBLACIÓN INICIAL", lote]),
+                    "PCT_CUMP_AVES": float(df_h.loc["% CUMPL. AVES", lote]),
+                    "PESO": float(df_h.loc["PESO", lote]),
+                    "PESO_STD": float(df_h.loc["PESO STD", lote]),
+                    "PCT_CUMP_PESO": float(df_h.loc["% CUMPL. PESO", lote]),
                 }
 
+                # ♂️ MACHOS
                 st.session_state.datos_productivos[lote]["MACHOS"] = {
-                    "EDAD": float(df_m.loc["Edad", lote]),
-                    "UNIFORMIDAD": float(df_m.loc["Uniformidad (%)", lote]),
-                    "AVES_ENTREGADAS": float(df_m.loc["Aves entregadas", lote]),
-                    "POBLACION_INICIAL": float(df_m.loc["Población inicial", lote]),
-                    "PESO": float(df_m.loc["Peso", lote]),
-                    "PESO_STD": float(df_m.loc["Peso STD", lote]),
-                    "PCT_CUMP_PESO": float(df_m.loc["% Cumpl. peso", lote]),
+                    "EDAD": float(df_m.loc["EDAD", lote]),
+                    "UNIFORMIDAD": float(df_m.loc["UNIFORMIDAD (%)", lote]),
+                    "AVES_ENTREGADAS": float(df_m.loc["AVES ENTREGADAS", lote]),
+                    "POBLACION_INICIAL": float(df_m.loc["POBLACIÓN INICIAL", lote]),
+                    "PESO": float(df_m.loc["PESO", lote]),
+                    "PESO_STD": float(df_m.loc["PESO STD", lote]),
+                    "PCT_CUMP_PESO": float(df_m.loc["% CUMPL. PESO", lote]),
                 }
 
         # =========================
@@ -1568,5 +1580,6 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
