@@ -1011,55 +1011,6 @@ st.subheader("📬 Opciones finales")
 
 tab1, tab2 = st.tabs(["📊 Previsualizar resultado", "📧 Enviar por correo"])
 
-
-# =========================
-# RESUMEN POR LOTE
-# =========================
-resumen_lote = (
-    df_final[pagos]
-    .sum()
-    .reset_index()
-    .rename(columns={"index": "Lote", 0: "Total S/"})
-)
-
-resumen_lote["Lote"] = resumen_lote["Lote"].str.replace("PAGO_", "")
-resumen_lote["% del total"] = (
-    resumen_lote["Total S/"] / total_general * 100
-).round(2)
-
-st.subheader("📦 Resumen por lote")
-st.dataframe(resumen_lote, use_container_width=True)
-
-fig_lote = px.bar(
-    resumen_lote,
-    x="Lote",
-    y="Total S/",
-    text="Total S/",
-    title="Distribución de pago por lote"
-)
-
-fig_lote.update_traces(
-    texttemplate="S/ %{text:,.2f}",
-    textposition="outside"
-)
-
-fig_lote.update_layout(
-    yaxis=dict(
-        rangemode="tozero",
-        automargin=True
-    ),
-    height=450,
-    margin=dict(t=120, b=50)
-)
-
-fig_lote.update_traces(
-    texttemplate="S/ %{text:,.2f}",
-    textposition="outside",
-    cliponaxis=False
-)
-
-st.plotly_chart(fig_lote, use_container_width=True)
-
 # -------- TAB 1: PREVISUALIZAR --------
 with tab1:
 
@@ -1181,7 +1132,6 @@ with tab1:
     # =========================
     st.markdown("### 💰 Resultado final por trabajador")
     st.dataframe(df_final, use_container_width=True)
-
 
 # -------- TAB 2: ENVIAR POR CORREO --------
 with tab2:
@@ -1433,4 +1383,5 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
