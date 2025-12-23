@@ -1114,51 +1114,52 @@ with tab2:
     st.markdown("### 📧 Enviar resultado por correo corporativo")
 
     # =========================
-    # Helper: HTML limpio (sin decimales basura)
+    # Helper: HTML limpio (ENTEROS sin .00)
     # =========================
     def tabla_html_limpia(df, decimales_por_fila=None):
         df_fmt = df.copy()
 
-        # Formateo por FILA (porque tu tabla está invertida: filas=campos, columnas=lotes)
         for fila in df_fmt.index:
             serie = pd.to_numeric(df_fmt.loc[fila], errors="coerce")
 
             if serie.notna().any():
                 if decimales_por_fila and fila in decimales_por_fila:
                     dec = int(decimales_por_fila[fila])
-                    df_fmt.loc[fila] = serie.round(dec)
+                    df_fmt.loc[fila] = serie.apply(
+                        lambda x: f"{x:.{dec}f}" if pd.notna(x) else ""
+                    )
                 else:
-                    # 👉 Por defecto: ENTERO (0 decimales)
-                    df_fmt.loc[fila] = serie.round(0).astype("Int64")
+                    # 👉 ENTEROS LIMPIOS
+                    df_fmt.loc[fila] = serie.apply(
+                        lambda x: f"{int(x)}" if pd.notna(x) else ""
+                    )
 
-        # HTML base
         html = df_fmt.to_html(index=True, border=1)
 
-        # Estilos (Outlook-friendly)
+        # ===== ESTILOS (Outlook-safe) =====
         html = html.replace(
             "<table",
             "<table style='border-collapse:collapse; width:100%; font-family:Arial, sans-serif; font-size:12px;'"
         )
         html = html.replace(
             "<th>",
-            "<th style='border:1px solid #d1d5db; background:#f3f4f6; padding:6px; text-align:left; white-space:nowrap;'>"
+            "<th style='border:1px solid #d1d5db; background:#f3f4f6; padding:6px; text-align:left;'>"
         )
-        # 👇 TODO td a la derecha por defecto
         html = html.replace(
             "<td>",
-            "<td style='border:1px solid #d1d5db; padding:6px; text-align:right; white-space:nowrap;'>"
+            "<td style='border:1px solid #d1d5db; padding:6px; text-align:right;'>"
         )
-        # 👇 Primera columna (nombres de filas) a la izquierda
+        # Primera columna (nombres de filas) a la izquierda
         html = html.replace(
-            "<td style='border:1px solid #d1d5db; padding:6px; text-align:right; white-space:nowrap;'>",
-            "<td style='border:1px solid #d1d5db; padding:6px; text-align:left; white-space:nowrap;'>",
+            "<td style='border:1px solid #d1d5db; padding:6px; text-align:right;'>",
+            "<td style='border:1px solid #d1d5db; padding:6px; text-align:left;'>",
             1
         )
 
         return html
 
     # =========================
-    # Inputs de correo
+    # Inputs
     # =========================
     correo_destino = st.text_input("Correo destino", key="correo_destino")
     asunto = st.text_input(
@@ -1183,114 +1184,29 @@ with tab2:
                 msg["Subject"] = asunto
 
                 # =========================
-                # TABLAS RESUMEN (FORMATEADAS)
+                # RESUMEN POR LOTE
                 # =========================
                 resumen_lote_mail = resumen_lote.copy()
-                # Asegurar formatos limpios (sin decimales extra)
-                if "Total S/" in resumen_lote_mail.columns:
-                    resumen_lote_mail["Total S/"] = pd.to_numeric(resumen_lote_mail["Total S/"], errors="coerce").round(2)
-                if "% del total" in resumen_lote_mail.columns:
-                    resumen_lote_mail["% del total"] = pd.to_numeric(resumen_lote_mail["% del total"], errors="coerce").round(2)
+                resumen_lote_mail["Total S/"] = resumen_lote_mail["Total S/"].apply(lambda x: f"{x:.2f}")
+                resumen_lote_mail["% del total"] = resumen_lote_mail["% del total"].apply(lambda x: f"{x:.2f}")
 
                 tabla_lote_html = resumen_lote_mail.to_html(index=False, border=1)
-                tabla_lote_html = tabla_lote_html.replace(
-                    "<table",
-                    "<table style='border-collapse:collapse; width:100%; font-family:Arial, sans-serif; font-size:12px;'"
-                ).replace(
-                    "<th>",
-                    "<th style='border:1px solid #d1d5db; background:#f3f4f6; padding:6px; text-align:left; white-space:nowrap;'>"
-                ).replace(
-                    "<td>",
-                    "<td style='border:1px solid #d1d5db; padding:6px; text-align:left; white-space:nowrap;'>"
-                )
 
+                # =========================
+                # RESULTADO FINAL
+                # =========================
                 df_final_mail = df_final.copy()
-                # Columnas monetarias a 2 decimales
                 for c in df_final_mail.columns:
                     if c.startswith("PAGO_") or c == "TOTAL S/":
-                        df_final_mail[c] = pd.to_numeric(df_final_mail[c], errors="coerce").round(2)
+                        df_final_mail[c] = df_final_mail[c].apply(lambda x: f"{x:.2f}")
 
                 tabla_resultado_html = df_final_mail.to_html(index=False, border=1)
-                tabla_resultado_html = tabla_resultado_html.replace(
-                    "<table",
-                    "<table style='border-collapse:collapse; width:100%; font-family:Arial, sans-serif; font-size:12px;'"
-                ).replace(
-                    "<th>",
-                    "<th style='border:1px solid #d1d5db; background:#f3f4f6; padding:6px; text-align:left; white-space:nowrap;'>"
-                ).replace(
-                    "<td>",
-                    "<td style='border:1px solid #d1d5db; padding:6px; text-align:left; white-space:nowrap;'>"
-                )
 
                 # =========================
-                # DATOS PRODUCTIVOS (FORMATEADOS)
+                # DATOS PRODUCTIVOS
                 # =========================
-                if tipo == "PRODUCCIÓN":
+                if tipo == "LEVANTE":
 
-                    campos_prod = {
-                        "Etapa": "ETAPA",
-                        "Edad (sem)": "EDAD_AVE",
-                        "Huevos sem 41": "HUEVOS_SEM_41",
-                        "Población inicial": "POBLACION_INICIAL",
-                        "Huevos / AA": "HUEVOS_POR_AA",
-                        "Huevos STD 41": "HUEVOS_STD_41",
-                        "% Cumplimiento": "PCT_CUMPLIMIENTO",
-                        "% Huevos bomba": "PCT_HUEVOS_BOMBA",
-                    }
-
-                    data_prod = {
-                        campo: [
-                            st.session_state.datos_productivos
-                            .get(lote, {})
-                            .get(key, "Primera etapa" if key == "ETAPA" else 0)
-                            for lote in lotes
-                        ]
-                        for campo, key in campos_prod.items()
-                    }
-
-                    df_prod_mail = pd.DataFrame(data_prod, index=lotes).T
-
-                    # OJO: Etapa no es numérico, así que no la pases por tabla_html_limpia
-                    # La armamos a mano: separamos "Etapa" y el resto numérico
-                    if "Etapa" in df_prod_mail.index:
-                        df_etapa = df_prod_mail.loc[["Etapa"]]
-                        df_num = df_prod_mail.drop(index=["Etapa"])
-                    else:
-                        df_etapa = None
-                        df_num = df_prod_mail
-
-                    # Tabla numérica con decimales por fila
-                    tabla_prod_num_html = tabla_html_limpia(
-                        df_num,
-                        decimales_por_fila={
-                            "Huevos / AA": 2,
-                            "% Cumplimiento": 2,
-                            "% Huevos bomba": 2
-                        }
-                    )
-
-                    # Tabla etapa (texto) con estilo limpio
-                    tabla_etapa_html = ""
-                    if df_etapa is not None:
-                        tabla_etapa_html = df_etapa.to_html(index=True, border=1)
-                        tabla_etapa_html = tabla_etapa_html.replace(
-                            "<table",
-                            "<table style='border-collapse:collapse; width:100%; font-family:Arial, sans-serif; font-size:12px;'"
-                        ).replace(
-                            "<th>",
-                            "<th style='border:1px solid #d1d5db; background:#f3f4f6; padding:6px; text-align:left; white-space:nowrap;'>"
-                        ).replace(
-                            "<td>",
-                            "<td style='border:1px solid #d1d5db; padding:6px; text-align:left; white-space:nowrap;'>"
-                        )
-
-                    bloque_productivo_html = f"""
-                    <h3>🏭 Datos productivos – Producción</h3>
-                    {tabla_etapa_html}
-                    {tabla_prod_num_html}
-                    """
-
-                else:
                     # ---------- HEMBRAS ----------
                     campos_h = {
                         "Edad": "EDAD",
@@ -1303,26 +1219,21 @@ with tab2:
                         "% Cumpl. peso": "PCT_CUMP_PESO",
                     }
 
-                    data_h = {
+                    df_h = pd.DataFrame({
                         campo: [
                             st.session_state.datos_productivos
-                            .get(lote, {})
-                            .get("HEMBRAS", {})
-                            .get(key, 2.53 if key == "PESO_STD" else 0)
-                            for lote in lotes
+                            .get(l, {}).get("HEMBRAS", {}).get(key, 0)
+                            for l in lotes
                         ]
                         for campo, key in campos_h.items()
-                    }
-
-                    df_h_mail = pd.DataFrame(data_h, index=lotes).T
+                    }, index=lotes).T
 
                     tabla_h_html = tabla_html_limpia(
-                        df_h_mail,
+                        df_h,
                         decimales_por_fila={
                             "Uniformidad (%)": 2,
                             "% Cumpl. aves": 2,
                             "% Cumpl. peso": 2,
-                            "Peso": 3,        # si quieres peso con 3, cambia a 2
                             "Peso STD": 2
                         }
                     )
@@ -1338,26 +1249,21 @@ with tab2:
                         "% Cumpl. peso": "PCT_CUMP_PESO",
                     }
 
-                    data_m = {
+                    df_m = pd.DataFrame({
                         campo: [
                             st.session_state.datos_productivos
-                            .get(lote, {})
-                            .get("MACHOS", {})
-                            .get(key, 2.955 if key == "PESO_STD" else 0)
-                            for lote in lotes
+                            .get(l, {}).get("MACHOS", {}).get(key, 0)
+                            for l in lotes
                         ]
                         for campo, key in campos_m.items()
-                    }
-
-                    df_m_mail = pd.DataFrame(data_m, index=lotes).T
+                    }, index=lotes).T
 
                     tabla_m_html = tabla_html_limpia(
-                        df_m_mail,
+                        df_m,
                         decimales_por_fila={
                             "Uniformidad (%)": 2,
                             "% Cumpl. peso": 2,
-                            "Peso": 3,      # si quieres peso con 3, cambia a 2
-                            "Peso STD": 3   # 👈 REQUISITO: STD machos 3 decimales
+                            "Peso STD": 3   # 🔒 exacto
                         }
                     )
 
@@ -1369,29 +1275,27 @@ with tab2:
                     """
 
                 # =========================
-                # CUERPO DEL CORREO
+                # CUERPO
                 # =========================
                 cuerpo_html = f"""
                 <html>
-                    <body style="font-family:Arial, sans-serif; font-size:12px;">
-                        <h2>Bono Reproductoras GDP</h2>
+                <body style="font-family:Arial; font-size:12px;">
+                    <h2>Bono Reproductoras GDP</h2>
+                    <p><b>Granja:</b> {st.session_state.get("granja_seleccionada","")}</p>
+                    <p><b>Tipo:</b> {tipo}</p>
+                    <p><b>Lotes:</b> {", ".join(lotes)}</p>
 
-                        <p><strong>Granja:</strong> {st.session_state.get("granja_seleccionada","")}</p>
-                        <p><strong>Tipo de proceso:</strong> {tipo}</p>
-                        <p><strong>Lotes:</strong> {", ".join(lotes)}</p>
-                        <p><strong>Fecha:</strong> {pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}</p>
+                    {bloque_productivo_html}
 
-                        {bloque_productivo_html}
+                    <h3>📦 Resumen por lote</h3>
+                    {tabla_lote_html}
 
-                        <h3>📦 Resumen por lote</h3>
-                        {tabla_lote_html}
+                    <h3>💰 Resultado final por trabajador</h3>
+                    {tabla_resultado_html}
 
-                        <h3>💰 Resultado final por trabajador</h3>
-                        {tabla_resultado_html}
-
-                        <p>{mensaje}</p>
-                        <p><strong>Equipo de Control de Gestión</strong></p>
-                    </body>
+                    <p>{mensaje}</p>
+                    <p><b>Equipo de Control de Gestión</b></p>
+                </body>
                 </html>
                 """
 
@@ -1416,5 +1320,3 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
-
-
