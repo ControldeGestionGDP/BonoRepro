@@ -456,35 +456,40 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         lotes = [l.strip() for l in lotes_txt.split(",")]
 
         # =========================
-        # 2️⃣ CONFIGURACIÓN POR LOTE
-        # =========================
-        fila_lotes = raw[
-            raw.iloc[:, 0].astype(str).str.strip().str.upper() == "LOTE"
-        ].index[0]
+# 2️⃣ CONFIGURACIÓN POR LOTE (ROBUSTO)
+# =========================
+fila_lotes = raw[
+    raw.iloc[:, 0].astype(str).str.strip().str.upper() == "LOTE"
+].index[0]
 
-        df_lotes = pd.read_excel(
-            archivo_prev,
-            sheet_name="BONO_REPRODUCTORAS",
-            header=fila_lotes
-        )
+# Leer solo las 3 columnas necesarias
+df_lotes_raw = raw.iloc[fila_lotes + 1:, 0:3].copy()
+df_lotes_raw.columns = ["LOTE", "GENETICA", "MONTO"]
 
-        df_lotes.columns = df_lotes.columns.str.strip().str.upper()
+# Limpiar
+df_lotes_raw["LOTE"] = df_lotes_raw["LOTE"].astype(str).str.strip()
+df_lotes_raw["GENETICA"] = df_lotes_raw["GENETICA"].astype(str).str.strip().str.upper()
 
-        config_lotes = {}
-        for _, r in df_lotes.iterrows():
+# Convertir monto a número seguro
+df_lotes_raw["MONTO"] = (
+    df_lotes_raw["MONTO"]
+    .astype(str)
+    .str.replace(",", "", regex=False)
+)
+df_lotes_raw["MONTO"] = pd.to_numeric(df_lotes_raw["MONTO"], errors="coerce")
 
-            if pd.isna(r["LOTE"]):
-                continue
+# Cortar cuando LOTE esté vacío
+df_lotes_raw = df_lotes_raw[df_lotes_raw["LOTE"].notna()]
+df_lotes_raw = df_lotes_raw[df_lotes_raw["LOTE"] != ""]
 
-            try:
-                monto = float(str(r["MONTO S/"]).replace(",", "").strip())
-            except:
-                monto = 0.0
-
-            config_lotes[str(r["LOTE"]).strip()] = {
-                "GENETICA": str(r["GENÉTICA"]).upper().strip(),
-                "MONTO": monto
-            }
+# Construir config_lotes
+config_lotes = {}
+for _, r in df_lotes_raw.iterrows():
+    lote = r["LOTE"]
+    config_lotes[lote] = {
+        "GENETICA": r["GENETICA"] if r["GENETICA"] else "ROSS",
+        "MONTO": float(r["MONTO"]) if pd.notna(r["MONTO"]) else 0.0
+    }
 
         # =========================
         # 3️⃣ TABLA DE TRABAJADORES
@@ -1630,6 +1635,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
