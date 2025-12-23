@@ -493,16 +493,25 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         )
 
         # =========================
-        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE (POR POSICIÓN, ROBUSTO)
+        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE (CORRECTO)
         # =========================
         if tipo == "LEVANTE":
 
             st.session_state.datos_productivos = {}
 
-            inicio_h = raw[raw.iloc[:, 0] == "Edad"].index[0]
-            df_h = leer_bloque_invertido(raw, inicio_h, inicio_h + 8)
+            # 🔑 BUSCAR LAS DOS FILAS "EDAD" (Hembras y Machos)
+            idx_edades = raw[
+                raw.iloc[:, 0].astype(str).str.strip().str.upper() == "EDAD"
+            ].index.tolist()
 
-            inicio_m = inicio_h + 9
+            if len(idx_edades) < 2:
+                st.error("❌ No se encontraron dos bloques de EDAD (Hembras y Machos)")
+                st.stop()
+
+            inicio_h = idx_edades[0]   # Hembras
+            inicio_m = idx_edades[1]   # Machos
+
+            df_h = leer_bloque_invertido(raw, inicio_h, inicio_h + 8)
             df_m = leer_bloque_invertido(raw, inicio_m, inicio_m + 7)
 
             for lote in df_h.columns:
@@ -541,6 +550,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         st.session_state.tipo = tipo
 
         st.success("✅ Excel cargado y reconstruido correctamente")
+
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -1580,6 +1590,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
