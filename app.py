@@ -887,9 +887,13 @@ if tipo == "LEVANTE":
         st.success("✅ Datos de MACHOS guardados correctamente")
 
 # =========================
-# 🧬 CONFIGURACIÓN POR LOTE (FINAL CORRECTO)
+# 🧬 CONFIGURACIÓN POR LOTE (CORREGIDO DEFINITIVO)
 # =========================
 st.subheader("🧬 Configuración por lote")
+
+# 🔒 Blindaje
+if "config_lotes" not in st.session_state:
+    st.session_state.config_lotes = {}
 
 config_lotes = st.session_state.config_lotes
 cols = st.columns(len(lotes))
@@ -897,33 +901,33 @@ cols = st.columns(len(lotes))
 for i, lote in enumerate(lotes):
     with cols[i]:
 
-        key_gen = f"gen_{lote}_v2"
-        key_monto = f"monto_{lote}_v2"
-
-        valor_gen = config_lotes[lote]["GENETICA"]
-        valor_monto = config_lotes[lote]["MONTO"]
+        # 🔑 Lectura SEGURA
+        data_lote = config_lotes.get(lote, {})
+        valor_gen = data_lote.get("GENETICA", "ROSS")
+        valor_monto = data_lote.get("MONTO", 0.0)
 
         genetica = st.text_input(
             f"Genética - Lote {lote}",
-            value=valor_gen,
-            key=key_gen
+            value=str(valor_gen),
+            key=f"gen_{lote}"
         )
 
         monto = st.number_input(
             f"Monto S/ - Lote {lote}",
             min_value=0.0,
             step=50.0,
-            value=valor_monto,
-            key=key_monto
+            value=float(valor_monto),
+            key=f"monto_{lote}"
         )
 
+        # 💾 Guardado
         config_lotes[lote] = {
-            "GENETICA": genetica.upper(),
-            "MONTO": monto
+            "GENETICA": genetica.strip().upper(),
+            "MONTO": float(monto)
         }
 
+# Persistir
 st.session_state.config_lotes = config_lotes
-st.session_state.cargado_desde_excel = False
 
 
 # SESSION STATE tabla
@@ -1616,6 +1620,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
