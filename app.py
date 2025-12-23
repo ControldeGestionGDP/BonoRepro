@@ -552,7 +552,6 @@ if tipo == "PRODUCCIÓN":
 
     st.subheader("🏭 Información productiva – Producción")
 
-    # Definición de campos
     campos_prod = {
         "Etapa": "ETAPA",
         "Edad (sem)": "EDAD_AVE",
@@ -564,7 +563,6 @@ if tipo == "PRODUCCIÓN":
         "% Huevos bomba": "PCT_HUEVOS_BOMBA",
     }
 
-    # Construir DataFrame desde session_state
     data = {
         campo: [
             st.session_state.datos_productivos
@@ -577,21 +575,21 @@ if tipo == "PRODUCCIÓN":
 
     df_prod = pd.DataFrame(data, index=lotes).T
 
-    # ===== FORMULARIO (evita doble ingreso) =====
+    # ===== FORMULARIO =====
     with st.form("form_produccion_tabla"):
         df_edit = st.data_editor(
             df_prod,
             use_container_width=True,
             num_rows="fixed",
             column_config={
-                lote: st.column_config.NumberColumn(format="%.2f")
+                lote: st.column_config.NumberColumn()
                 for lote in lotes
             }
         )
 
         guardar = st.form_submit_button("💾 Guardar Producción")
 
-    # ===== Guardado REAL =====
+    # ===== Guardado =====
     if guardar:
         for lote in lotes:
             st.session_state.datos_productivos.setdefault(lote, {})
@@ -641,13 +639,16 @@ if tipo == "LEVANTE":
 
     df_h = pd.DataFrame(data_h, index=lotes).T
 
+    # (opcional) redondeo lógico
+    df_h.loc["Peso STD"] = df_h.loc["Peso STD"].astype(float).round(2)
+
     with st.form("form_levante_hembras"):
         df_h_edit = st.data_editor(
             df_h,
             use_container_width=True,
             num_rows="fixed",
             column_config={
-                lote: st.column_config.NumberColumn(format="%.2f")
+                lote: st.column_config.NumberColumn()
                 for lote in lotes
             }
         )
@@ -692,13 +693,16 @@ if tipo == "LEVANTE":
 
     df_m = pd.DataFrame(data_m, index=lotes).T
 
+    # 🔒 PESO STD MACHOS → SIEMPRE 3 DECIMALES
+    df_m.loc["Peso STD"] = df_m.loc["Peso STD"].astype(float).round(3)
+
     with st.form("form_levante_machos"):
         df_m_edit = st.data_editor(
             df_m,
             use_container_width=True,
             num_rows="fixed",
             column_config={
-                lote: st.column_config.NumberColumn(format="%.3f")
+                lote: st.column_config.NumberColumn()
                 for lote in lotes
             }
         )
@@ -1064,4 +1068,5 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
