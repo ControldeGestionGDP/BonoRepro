@@ -129,20 +129,20 @@ if st.session_state.ingresar and st.session_state.ver_manual:
 
     st.markdown("## 📘 Manual de Uso – Bono Reproductoras GDP")
 
-   # 🔴 REQUISITO PREVIO OBLIGATORIO
-st.warning(
-    "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
-    "Antes de iniciar el cálculo del bono, se debe coordinar previamente con el "
-    "**equipo de Control de Gestión (CDG)**.\n\n"
-    "**Paso obligatorio:**\n"
-    "• Completar todos los campos del sistema y **enviar la información al equipo CDG para su validación**.\n"
-    "• CDG validará los datos productivos (Huevos Bomba, % de Cumplimiento, entre otros indicadores).\n\n"
-    "**Correo de validación:**\n"
-    "📧 humbertoatoche@donpollo.pe\n"
-    "📧 galapi@donpollo.pe\n\n"
-    "• Asimismo, se valida la **definición de los montos base por granja y por lote**.\n\n"
-    "El sistema asume que esta información ya fue revisada y validada oficialmente por CDG."
-)
+    # 🔴 REQUISITO PREVIO OBLIGATORIO
+    st.warning(
+        "⚠️ **REQUISITO PREVIO OBLIGATORIO**\n\n"
+        "Antes de iniciar el cálculo del bono, se debe coordinar previamente con el "
+        "**equipo de Control de Gestión (CDG)**.\n\n"
+        "**Paso obligatorio:**\n"
+        "• Completar todos los campos del sistema y **enviar la información al equipo CDG para su validación**.\n"
+        "• CDG validará los datos productivos (Huevos Bomba, % de Cumplimiento, entre otros indicadores).\n\n"
+        "**Correo de validación:**\n"
+        "📧 humbertoatoche@donpollo.pe\n"
+        "📧 galapi@donpollo.pe\n\n"
+        "• Asimismo, se valida la **definición de los montos base por granja y por lote**.\n\n"
+        "El sistema asume que esta información ya fue revisada y validada oficialmente por CDG."
+    )
 
     st.markdown("""
     ---
@@ -179,11 +179,11 @@ st.warning(
 
     - 🏡 **Granja**
     - 🔀 **Tipo de proceso**:  
-        - **PRODUCCIÓN** → indicadores productivos (huevos, cumplimiento, huevos bomba)  
-        - **LEVANTE** → indicadores por **Hembras** y **Machos**
+        - **PRODUCCIÓN** → indicadores productivos  
+        - **LEVANTE** → indicadores por Hembras y Machos
     - 🏷️ **Lotes** (ejemplo: 211-212-213)
 
-    ⚠️ Una vez confirmados estos datos, **no se recomienda modificarlos**, ya que afectan los registros ingresados.
+    ⚠️ Una vez confirmados estos datos, no se recomienda modificarlos.
 
     ---
 
@@ -191,85 +191,49 @@ st.warning(
     Según el tipo de proceso seleccionado:
 
     #### 🏭 PRODUCCIÓN
-    Se ingresan datos como:
-    - Etapa
-    - Edad
-    - Huevos semana 41
-    - Huevos STD
-    - % de cumplimiento
-    - % de huevos bomba
+    - Etapa  
+    - Edad  
+    - Huevos  
+    - % Cumplimiento  
+    - % Huevos bomba  
 
     #### 🐔 LEVANTE
-    Se registran datos por separado para:
-    - ♀️ **Hembras**
-    - ♂️ **Machos**
+    - ♀️ Hembras  
+    - ♂️ Machos  
+    (edad, uniformidad, peso y cumplimiento)
 
-    Incluyendo:
-    - Edad
-    - Uniformidad
-    - Peso real
-    - Peso estándar
-    - % de cumplimiento
-
-    💾 **Importante:** siempre presione el botón **Guardar** luego de ingresar o modificar datos.
+    💾 Siempre presione **Guardar** luego de modificar datos.
 
     ---
 
     ### 5️⃣ Configuración económica por lote
-    Para cada lote se define:
-    - 🧬 **Genética**
-    - 💰 **Monto total asignado (S/)**
-
-    Estos montos son utilizados como base para el cálculo del bono.
+    - 🧬 Genética  
+    - 💰 Monto base por lote  
 
     ---
 
     ### 6️⃣ Gestión de trabajadores
-    En esta sección podrá:
+    - ➕ Agregar por DNI  
+    - ➖ Eliminar trabajadores  
+    - **P_[Lote]** porcentaje  
+    - **F_[Lote]** faltas  
 
-    - ➕ Agregar trabajadores por DNI
-    - ➖ Eliminar trabajadores
-    - Registrar por cada lote:
-        - **P_[Lote]** → Porcentaje de participación
-        - **F_[Lote]** → Faltas injustificadas
-
-    🔎 El sistema aplica automáticamente:
-    - Reglas por cargo
-    - Factores de descuento por faltas
-
-    💾 No olvide presionar **Actualizar tabla** después de editar.
+    💾 Presione **Actualizar tabla** al finalizar.
 
     ---
 
-    ### 7️⃣ Resultados y validación
-    El sistema genera automáticamente:
-
-    - 💰 **Resultado final por trabajador**
-    - 📦 **Resumen de pago por lote**
-    - 📊 **Gráfica de distribución del bono por lote**
-
-    En la pestaña **📊 Previsualizar resultado** podrá validar toda la información antes de exportar o enviar.
+    ### 7️⃣ Resultados
+    - Resultado final por trabajador  
+    - Resumen por lote  
+    - Gráficas de distribución  
 
     ---
 
     ### 8️⃣ Exportación y envío
-    Finalmente podrá:
+    - 📥 Descargar Excel oficial  
+    - 📧 Enviar correo corporativo con validación  
 
-    - 📥 **Descargar el Excel oficial** con:
-        - Encabezado del proceso
-        - Datos productivos
-        - Resumen por lote
-        - Resultado final por trabajador
-
-    - 📧 **Enviar el resultado por correo corporativo**, incluyendo:
-        - Datos productivos
-        - Resumen por lote
-        - Detalle de pagos
-        - Archivo Excel adjunto
-
-    ---
-
-    ✔️ **Este flujo garantiza trazabilidad, control y consistencia con los reportes oficiales.**
+    ✔️ Flujo validado y alineado con Control de Gestión.
     """)
 
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -279,7 +243,6 @@ st.warning(
             st.rerun()
 
     st.stop()
-
 
 # =========================
 # BARRA LATERAL – POWER BI
@@ -1515,6 +1478,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
