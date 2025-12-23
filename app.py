@@ -682,7 +682,7 @@ if tipo == "LEVANTE":
         use_container_width=True,
         num_rows="fixed",
         column_config={
-            lote: st.column_config.NumberColumn(format="%.2f")
+            lote: st.column_config.NumberColumn(format="%.3f")
             for lote in lotes
         }
     )
@@ -1044,6 +1044,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
