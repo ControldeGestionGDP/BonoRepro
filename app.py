@@ -456,40 +456,47 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         lotes = [l.strip() for l in lotes_txt.split(",")]
 
         # =========================
-# 2️⃣ CONFIGURACIÓN POR LOTE (ROBUSTO)
-# =========================
-fila_lotes = raw[
-    raw.iloc[:, 0].astype(str).str.strip().str.upper() == "LOTE"
-].index[0]
+        # 2️⃣ CONFIGURACIÓN POR LOTE (ROBUSTO)
+        # =========================
+        fila_lotes = raw[
+            raw.iloc[:, 0].astype(str).str.strip().str.upper() == "LOTE"
+        ].index[0]
 
-# Leer solo las 3 columnas necesarias
-df_lotes_raw = raw.iloc[fila_lotes + 1:, 0:3].copy()
-df_lotes_raw.columns = ["LOTE", "GENETICA", "MONTO"]
+        # Leer SOLO columnas A, B y C (Lote, Genética, Monto)
+        df_lotes_raw = raw.iloc[fila_lotes + 1:, 0:3].copy()
+        df_lotes_raw.columns = ["LOTE", "GENETICA", "MONTO"]
 
-# Limpiar
-df_lotes_raw["LOTE"] = df_lotes_raw["LOTE"].astype(str).str.strip()
-df_lotes_raw["GENETICA"] = df_lotes_raw["GENETICA"].astype(str).str.strip().str.upper()
+        # Limpieza
+        df_lotes_raw["LOTE"] = df_lotes_raw["LOTE"].astype(str).str.strip()
+        df_lotes_raw["GENETICA"] = (
+            df_lotes_raw["GENETICA"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
 
-# Convertir monto a número seguro
-df_lotes_raw["MONTO"] = (
-    df_lotes_raw["MONTO"]
-    .astype(str)
-    .str.replace(",", "", regex=False)
-)
-df_lotes_raw["MONTO"] = pd.to_numeric(df_lotes_raw["MONTO"], errors="coerce")
+        df_lotes_raw["MONTO"] = (
+            df_lotes_raw["MONTO"]
+            .astype(str)
+            .str.replace(",", "", regex=False)
+        )
+        df_lotes_raw["MONTO"] = pd.to_numeric(
+            df_lotes_raw["MONTO"], errors="coerce"
+        )
 
-# Cortar cuando LOTE esté vacío
-df_lotes_raw = df_lotes_raw[df_lotes_raw["LOTE"].notna()]
-df_lotes_raw = df_lotes_raw[df_lotes_raw["LOTE"] != ""]
+        # Cortar cuando LOTE esté vacío (evita leer Hembras/Machos)
+        df_lotes_raw = df_lotes_raw[
+            df_lotes_raw["LOTE"].notna() & (df_lotes_raw["LOTE"] != "")
+        ]
 
-# Construir config_lotes
-config_lotes = {}
-for _, r in df_lotes_raw.iterrows():
-    lote = r["LOTE"]
-    config_lotes[lote] = {
-        "GENETICA": r["GENETICA"] if r["GENETICA"] else "ROSS",
-        "MONTO": float(r["MONTO"]) if pd.notna(r["MONTO"]) else 0.0
-    }
+        # Construir config_lotes
+        config_lotes = {}
+        for _, r in df_lotes_raw.iterrows():
+            lote = r["LOTE"]
+            config_lotes[lote] = {
+                "GENETICA": r["GENETICA"] if r["GENETICA"] else "ROSS",
+                "MONTO": float(r["MONTO"]) if pd.notna(r["MONTO"]) else 0.0
+            }
 
         # =========================
         # 3️⃣ TABLA DE TRABAJADORES
@@ -880,19 +887,12 @@ if tipo == "LEVANTE":
 
         st.success("✅ Datos de MACHOS guardados correctamente")
 
-# Configuración por lote
+# =========================
+# 🧬 CONFIGURACIÓN POR LOTE
+# =========================
 if not confirmar_inicio:
-    st.info(
-        "🔒 Confirme Granja, Tipo de proceso y Lotes para continuar."
-    )
+    st.info("🔒 Confirme Granja, Tipo de proceso y Lotes para continuar.")
     st.stop()
-st.subheader("🧬 Configuración por lote")
-
-if "config_lotes" not in st.session_state:
-    st.session_state.config_lotes = {}
-
-config_lotes = st.session_state.config_lotes
-cols = st.columns(len(lotes))
 
 st.subheader("🧬 Configuración por lote")
 
@@ -912,26 +912,23 @@ for i, lote in enumerate(lotes):
         key_gen = f"gen_{lote}_v2"
         key_monto = f"monto_{lote}_v2"
 
-        # 🔑 SOLO si viene desde Excel → sincronizar UNA VEZ
+        # 🔑 Sincronizar SOLO una vez si vino del Excel
         if st.session_state.get("cargado_desde_excel", False):
             st.session_state[key_gen] = valor_gen
             st.session_state[key_monto] = valor_monto
 
         genetica = st.text_input(
             f"Genética - Lote {lote}",
-            value=valor_gen,
             key=key_gen
         )
 
         monto = st.number_input(
             f"Monto S/ - Lote {lote}",
             min_value=0.0,
-            value=valor_monto,
             step=50.0,
             key=key_monto
         )
 
-        # Guardar en config_lotes
         config_lotes[lote] = {
             "GENETICA": genetica.upper(),
             "MONTO": monto
@@ -940,10 +937,9 @@ for i, lote in enumerate(lotes):
 # Guardar en session_state
 st.session_state.config_lotes = config_lotes
 
-# 🔒 Apagar el flag después de pintar
+# 🔒 Apagar el flag luego de la primera carga
 if st.session_state.get("cargado_desde_excel", False):
     st.session_state.cargado_desde_excel = False
-
 
 # SESSION STATE tabla
 if "tabla" not in st.session_state:
@@ -1635,6 +1631,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
