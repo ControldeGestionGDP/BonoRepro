@@ -546,151 +546,152 @@ if "datos_productivos" not in st.session_state:
     st.session_state.datos_productivos = {}
 
 # =========================
-# ETAPA Y DATOS PRODUCTIVOS (PRODUCCIÓN - TABLA)
+# ETAPA Y DATOS PRODUCTIVOS (PRODUCCIÓN - TABLA INVERTIDA)
 # =========================
 if tipo == "PRODUCCIÓN":
 
     st.subheader("🏭 Información productiva – Producción")
 
-    filas = []
-    for lote in lotes:
-        d = st.session_state.datos_productivos.get(lote, {})
-        filas.append({
-            "Lote": lote,
-            "Etapa": d.get("ETAPA", "Primera etapa"),
-            "Edad (sem)": d.get("EDAD_AVE", 0),
-            "Huevos sem 41": d.get("HUEVOS_SEM_41", 0),
-            "Población inicial": d.get("POBLACION_INICIAL", 0),
-            "Huevos / AA": d.get("HUEVOS_POR_AA", 0.0),
-            "Huevos STD 41": d.get("HUEVOS_STD_41", 0),
-            "% Cumplimiento": d.get("PCT_CUMPLIMIENTO", 0.0),
-            "% Huevos bomba": d.get("PCT_HUEVOS_BOMBA", 0.0),
-        })
+    campos_prod = {
+        "Etapa": "ETAPA",
+        "Edad (sem)": "EDAD_AVE",
+        "Huevos sem 41": "HUEVOS_SEM_41",
+        "Población inicial": "POBLACION_INICIAL",
+        "Huevos / AA": "HUEVOS_POR_AA",
+        "Huevos STD 41": "HUEVOS_STD_41",
+        "% Cumplimiento": "PCT_CUMPLIMIENTO",
+        "% Huevos bomba": "PCT_HUEVOS_BOMBA",
+    }
 
-    df_prod = pd.DataFrame(filas)
+    data = {}
+    for campo, key in campos_prod.items():
+        data[campo] = [
+            st.session_state.datos_productivos
+            .get(lote, {})
+            .get(key, "Primera etapa" if key == "ETAPA" else 0)
+            for lote in lotes
+        ]
+
+    df_prod = pd.DataFrame(data, index=lotes).T
 
     df_edit = st.data_editor(
         df_prod,
         use_container_width=True,
         num_rows="fixed",
         column_config={
-            "Etapa": st.column_config.SelectboxColumn(
-                options=["Primera etapa", "Segunda etapa"]
-            ),
-            "% Cumplimiento": st.column_config.NumberColumn(
-                min_value=0.0, max_value=100.0, format="%.2f"
-            ),
-            "% Huevos bomba": st.column_config.NumberColumn(
-                min_value=0.0, max_value=100.0, format="%.2f"
-            ),
+            lote: st.column_config.NumberColumn(format="%.2f")
+            for lote in lotes
+            if lote
         }
     )
 
-    # 🔐 Guardar nuevamente en session_state (por lote)
-    for _, r in df_edit.iterrows():
-        st.session_state.datos_productivos[r["Lote"]] = {
-            "ETAPA": r["Etapa"],
-            "EDAD_AVE": int(r["Edad (sem)"]),
-            "HUEVOS_SEM_41": int(r["Huevos sem 41"]),
-            "POBLACION_INICIAL": int(r["Población inicial"]),
-            "HUEVOS_POR_AA": float(r["Huevos / AA"]),
-            "HUEVOS_STD_41": int(r["Huevos STD 41"]),
-            "PCT_CUMPLIMIENTO": float(r["% Cumplimiento"]),
-            "PCT_HUEVOS_BOMBA": float(r["% Huevos bomba"]),
-            "VALIDACION": "CERRADO"
-        }
+    # 🔐 Guardar nuevamente en session_state
+    for lote in lotes:
+        st.session_state.datos_productivos.setdefault(lote, {})
+        for campo, key in campos_prod.items():
+            valor = df_edit.loc[campo, lote]
 
+            if key == "ETAPA":
+                st.session_state.datos_productivos[lote][key] = valor
+            else:
+                st.session_state.datos_productivos[lote][key] = float(valor)
+
+        st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
 
 # =========================
-# DATOS PRODUCTIVOS – LEVANTE (TABLAS)
+# DATOS PRODUCTIVOS – LEVANTE (TABLAS INVERTIDAS)
 # =========================
 if tipo == "LEVANTE":
 
     st.subheader("🐔 Información productiva – Levante")
 
     # =====================================================
-    # ♀️ HEMBRAS – TABLA
+    # ♀️ HEMBRAS
     # =====================================================
     st.markdown("### ♀️ Hembras")
 
-    filas_h = []
-    for lote in lotes:
-        d = st.session_state.datos_productivos.get(lote, {}).get("HEMBRAS", {})
-        filas_h.append({
-            "Lote": lote,
-            "Edad": d.get("EDAD", 0),
-            "Uniformidad (%)": d.get("UNIFORMIDAD", 0.0),
-            "Aves entregadas": d.get("AVES_ENTREGADAS", 0),
-            "Población inicial": d.get("POBLACION_INICIAL", 0),
-            "% Cumpl. aves": d.get("PCT_CUMP_AVES", 0.0),
-            "Peso": d.get("PESO", 0.0),
-            "Peso STD": d.get("PESO_STD", 2.53),
-            "% Cumpl. peso": d.get("PCT_CUMP_PESO", 0.0),
-        })
+    campos_h = {
+        "Edad": "EDAD",
+        "Uniformidad (%)": "UNIFORMIDAD",
+        "Aves entregadas": "AVES_ENTREGADAS",
+        "Población inicial": "POBLACION_INICIAL",
+        "% Cumpl. aves": "PCT_CUMP_AVES",
+        "Peso": "PESO",
+        "Peso STD": "PESO_STD",
+        "% Cumpl. peso": "PCT_CUMP_PESO",
+    }
 
-    df_h = st.data_editor(
-        pd.DataFrame(filas_h),
+    data_h = {}
+    for campo, key in campos_h.items():
+        data_h[campo] = [
+            st.session_state.datos_productivos
+            .get(lote, {})
+            .get("HEMBRAS", {})
+            .get(key, 2.53 if key == "PESO_STD" else 0)
+            for lote in lotes
+        ]
+
+    df_h = pd.DataFrame(data_h, index=lotes).T
+
+    df_h_edit = st.data_editor(
+        df_h,
         use_container_width=True,
         num_rows="fixed",
         column_config={
-            "Uniformidad (%)": st.column_config.NumberColumn(min_value=0.0, max_value=100.0),
-            "% Cumpl. aves": st.column_config.NumberColumn(min_value=0.0, max_value=100.0),
-            "% Cumpl. peso": st.column_config.NumberColumn(format="%.2f"),
+            lote: st.column_config.NumberColumn(format="%.2f")
+            for lote in lotes
         }
     )
 
-    # Guardar HEMBRAS
-    for _, r in df_h.iterrows():
-        st.session_state.datos_productivos.setdefault(r["Lote"], {})["HEMBRAS"] = {
-            "EDAD": int(r["Edad"]),
-            "UNIFORMIDAD": float(r["Uniformidad (%)"]),
-            "AVES_ENTREGADAS": int(r["Aves entregadas"]),
-            "POBLACION_INICIAL": int(r["Población inicial"]),
-            "PCT_CUMP_AVES": float(r["% Cumpl. aves"]),
-            "PESO": float(r["Peso"]),
-            "PESO_STD": float(r["Peso STD"]),
-            "PCT_CUMP_PESO": float(r["% Cumpl. peso"]),
+    for lote in lotes:
+        st.session_state.datos_productivos.setdefault(lote, {})
+        st.session_state.datos_productivos[lote]["HEMBRAS"] = {
+            key: float(df_h_edit.loc[campo, lote])
+            for campo, key in campos_h.items()
         }
 
     # =====================================================
-    # ♂️ MACHOS – TABLA
+    # ♂️ MACHOS
     # =====================================================
     st.markdown("### ♂️ Machos")
 
-    filas_m = []
-    for lote in lotes:
-        d = st.session_state.datos_productivos.get(lote, {}).get("MACHOS", {})
-        filas_m.append({
-            "Lote": lote,
-            "Edad": d.get("EDAD", 0),
-            "Uniformidad (%)": d.get("UNIFORMIDAD", 0.0),
-            "Aves entregadas": d.get("AVES_ENTREGADAS", 0),
-            "Población inicial": d.get("POBLACION_INICIAL", 0),
-            "Peso": d.get("PESO", 0.0),
-            "Peso STD": d.get("PESO_STD", 2.955),
-            "% Cumpl. peso": d.get("PCT_CUMP_PESO", 0.0),
-        })
+    campos_m = {
+        "Edad": "EDAD",
+        "Uniformidad (%)": "UNIFORMIDAD",
+        "Aves entregadas": "AVES_ENTREGADAS",
+        "Población inicial": "POBLACION_INICIAL",
+        "Peso": "PESO",
+        "Peso STD": "PESO_STD",
+        "% Cumpl. peso": "PCT_CUMP_PESO",
+    }
 
-    df_m = st.data_editor(
-        pd.DataFrame(filas_m),
+    data_m = {}
+    for campo, key in campos_m.items():
+        data_m[campo] = [
+            st.session_state.datos_productivos
+            .get(lote, {})
+            .get("MACHOS", {})
+            .get(key, 2.955 if key == "PESO_STD" else 0)
+            for lote in lotes
+        ]
+
+    df_m = pd.DataFrame(data_m, index=lotes).T
+
+    df_m_edit = st.data_editor(
+        df_m,
         use_container_width=True,
         num_rows="fixed",
         column_config={
-            "Uniformidad (%)": st.column_config.NumberColumn(min_value=0.0, max_value=100.0),
-            "% Cumpl. peso": st.column_config.NumberColumn(format="%.2f"),
+            lote: st.column_config.NumberColumn(format="%.2f")
+            for lote in lotes
         }
     )
 
-    # Guardar MACHOS
-    for _, r in df_m.iterrows():
-        st.session_state.datos_productivos.setdefault(r["Lote"], {})["MACHOS"] = {
-            "EDAD": int(r["Edad"]),
-            "UNIFORMIDAD": float(r["Uniformidad (%)"]),
-            "AVES_ENTREGADAS": int(r["Aves entregadas"]),
-            "POBLACION_INICIAL": int(r["Población inicial"]),
-            "PESO": float(r["Peso"]),
-            "PESO_STD": float(r["Peso STD"]),
-            "PCT_CUMP_PESO": float(r["% Cumpl. peso"]),
+    for lote in lotes:
+        st.session_state.datos_productivos.setdefault(lote, {})
+        st.session_state.datos_productivos[lote]["MACHOS"] = {
+            key: float(df_m_edit.loc[campo, lote])
+            for campo, key in campos_m.items()
         }
 
 
@@ -1043,6 +1044,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
