@@ -363,6 +363,12 @@ def leer_bloque_invertido(raw, fila_inicio, fila_fin):
 
     return bloque
 
+def get_valor(df, fila_idx, col, default=0.0):
+    try:
+        v = df.iloc[fila_idx][col]
+        return float(v) if pd.notna(v) else default
+    except:
+        return default
 
 # =========================
 # CARGA DE ARCHIVOS SEGÚN OPCIÓN
@@ -487,7 +493,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         )
 
         # =========================
-        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE (ROBUSTO)
+        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE (POR POSICIÓN, ROBUSTO)
         # =========================
         if tipo == "LEVANTE":
 
@@ -499,45 +505,30 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
             inicio_m = inicio_h + 9
             df_m = leer_bloque_invertido(raw, inicio_m, inicio_m + 7)
 
-            MAP_H = {
-                "EDAD": "EDAD",
-                "UNIFORMIDAD": "UNIFORMIDAD",
-                "AVES_ENTREGADAS": "AVES",
-                "POBLACION_INICIAL": "POBLACIÓN",
-                "PCT_CUMP_AVES": "CUMPL",
-                "PESO": "PESO",
-                "PESO_STD": "STD",
-                "PCT_CUMP_PESO": "CUMPL",
-            }
-
             for lote in df_h.columns:
                 st.session_state.datos_productivos.setdefault(lote, {})
 
+                # ♀️ HEMBRAS (orden fijo)
                 st.session_state.datos_productivos[lote]["HEMBRAS"] = {
-                    k: float(df_h.loc[row, lote])
-                    for k, row in {
-                        "EDAD": [i for i in df_h.index if "EDAD" in i][0],
-                        "UNIFORMIDAD": [i for i in df_h.index if "UNIFORMIDAD" in i][0],
-                        "AVES_ENTREGADAS": [i for i in df_h.index if "AVES" in i][0],
-                        "POBLACION_INICIAL": [i for i in df_h.index if "POBLACIÓN" in i][0],
-                        "PCT_CUMP_AVES": [i for i in df_h.index if "CUMPL" in i and "AVE" in i][0],
-                        "PESO": [i for i in df_h.index if i == "PESO"][0],
-                        "PESO_STD": [i for i in df_h.index if "STD" in i][0],
-                        "PCT_CUMP_PESO": [i for i in df_h.index if "CUMPL" in i and "PESO" in i][0],
-                    }.items()
+                    "EDAD": get_valor(df_h, 0, lote),
+                    "UNIFORMIDAD": get_valor(df_h, 1, lote),
+                    "AVES_ENTREGADAS": get_valor(df_h, 2, lote),
+                    "POBLACION_INICIAL": get_valor(df_h, 3, lote),
+                    "PCT_CUMP_AVES": get_valor(df_h, 4, lote),
+                    "PESO": get_valor(df_h, 5, lote),
+                    "PESO_STD": get_valor(df_h, 6, lote),
+                    "PCT_CUMP_PESO": get_valor(df_h, 7, lote),
                 }
 
+                # ♂️ MACHOS (orden fijo)
                 st.session_state.datos_productivos[lote]["MACHOS"] = {
-                    k: float(df_m.loc[row, lote])
-                    for k, row in {
-                        "EDAD": [i for i in df_m.index if "EDAD" in i][0],
-                        "UNIFORMIDAD": [i for i in df_m.index if "UNIFORMIDAD" in i][0],
-                        "AVES_ENTREGADAS": [i for i in df_m.index if "AVES" in i][0],
-                        "POBLACION_INICIAL": [i for i in df_m.index if "POBLACIÓN" in i][0],
-                        "PESO": [i for i in df_m.index if i == "PESO"][0],
-                        "PESO_STD": [i for i in df_m.index if "STD" in i][0],
-                        "PCT_CUMP_PESO": [i for i in df_m.index if "CUMPL" in i][0],
-                    }.items()
+                    "EDAD": get_valor(df_m, 0, lote),
+                    "UNIFORMIDAD": get_valor(df_m, 1, lote),
+                    "AVES_ENTREGADAS": get_valor(df_m, 2, lote),
+                    "POBLACION_INICIAL": get_valor(df_m, 3, lote),
+                    "PESO": get_valor(df_m, 4, lote),
+                    "PESO_STD": get_valor(df_m, 5, lote),
+                    "PCT_CUMP_PESO": get_valor(df_m, 6, lote),
                 }
 
         # =========================
@@ -550,7 +541,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         st.session_state.tipo = tipo
 
         st.success("✅ Excel cargado y reconstruido correctamente")
-
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -1590,6 +1580,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
