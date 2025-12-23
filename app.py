@@ -326,6 +326,11 @@ REGLAS_PRODUCCION = {
 }
 REGLAS_LEVANTE = REGLAS_PRODUCCION.copy()
 
+# =========================
+# LISTA OFICIAL DE CARGOS
+# =========================
+CARGOS_VALIDOS = sorted(REGLAS_PRODUCCION.keys())
+
 DESCUENTO_FALTAS = {0:1.0, 1:0.90, 2:0.80, 3:0.70, 4:0.60}
 def factor_faltas(f):
     try:
@@ -883,12 +888,28 @@ st.info(
     "**P:** Porcentaje de Participación.\n\n"
     "**F:** Faltas Injustificadas."
 )
+
 with st.form("form_edicion"):
-    df_edit = st.data_editor(st.session_state.df_edit, use_container_width=True)
+    df_edit = st.data_editor(
+        st.session_state.df_edit,
+        use_container_width=True,
+        column_config={
+            "CARGO": st.column_config.SelectboxColumn(
+                "CARGO",
+                options=CARGOS_VALIDOS,
+                required=True
+            )
+        }
+    )
+
     if st.form_submit_button("💾 Actualizar tabla"):
+        # Normalización defensiva
+        df_edit["CARGO"] = df_edit["CARGO"].str.upper().str.strip()
+
         st.session_state.tabla = df_edit.copy()
         st.session_state.df_edit = df_edit.copy()
         st.success("✅ Tabla actualizada")
+
 
 # Cálculo final
 df_final = st.session_state.tabla.copy()
@@ -1480,6 +1501,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
