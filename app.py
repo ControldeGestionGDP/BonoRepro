@@ -528,243 +528,292 @@ st.session_state.tipo_confirmado = st.checkbox(
 if not st.session_state.tipo_confirmado:
     st.info("🔒 Confirme el tipo de proceso para continuar.")
     st.stop()
+    
+if "datos_productivos" not in st.session_state:
+    st.session_state.datos_productivos = {}
 
 # =========================
-# ETAPA Y DATOS PRODUCTIVOS (SOLO PRODUCCIÓN)
+# ETAPA Y DATOS PRODUCTIVOS (PRODUCCIÓN POR LOTE)
 # =========================
 if tipo == "PRODUCCIÓN":
 
-    st.subheader("🏭 Información productiva – Producción")
+    st.subheader("🏭 Información productiva – Producción (por lote)")
 
-    # Etapa productiva
-    etapa = st.radio(
-        "Etapa de Producción",
-        ["Primera etapa", "Segunda etapa"],
-        horizontal=True
-    )
+    for lote in lotes:
+        st.markdown(f"### 🧬 Lote {lote}")
 
-    st.markdown("### 📊 Datos técnicos de validación")
+        datos = st.session_state.datos_productivos.get(lote, {})
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        edad_ave = st.number_input(
-            "Edad del ave evaluada (semanas)",
-            min_value=0,
-            step=1
+        etapa = st.radio(
+            "Etapa de Producción",
+            ["Primera etapa", "Segunda etapa"],
+            horizontal=True,
+            key=f"etapa_{lote}",
+            index=0 if datos.get("ETAPA") != "Segunda etapa" else 1
         )
 
-        huevos_sem_41 = st.number_input(
-            "N° huevos producidos hasta la sem. 41",
-            min_value=0,
-            step=1
-        )
+        col1, col2, col3 = st.columns(3)
 
-        poblacion_inicial = st.number_input(
-            "Población Inicial Prod",
-            min_value=0,
-            step=1
-        )
+        with col1:
+            edad_ave = st.number_input(
+                "Edad del ave (semanas)",
+                min_value=0,
+                step=1,
+                key=f"edad_{lote}",
+                value=datos.get("EDAD_AVE", 0)
+            )
 
-    with col2:
-        huevos_por_aa = st.number_input(
-            "H. Prod / AA",
-            min_value=0.0,
-            step=0.01
-        )
+            huevos_sem_41 = st.number_input(
+                "Huevos hasta sem. 41",
+                min_value=0,
+                step=1,
+                key=f"h41_{lote}",
+                value=datos.get("HUEVOS_SEM_41", 0)
+            )
 
-        huevos_std_41 = st.number_input(
-            "Cant. Huevos prod según STD (41 sem)",
-            min_value=0,
-            step=1
-        )
+            poblacion_inicial = st.number_input(
+                "Población Inicial Prod",
+                min_value=0,
+                step=1,
+                key=f"pob_{lote}",
+                value=datos.get("POBLACION_INICIAL", 0)
+            )
 
-        pct_cumplimiento = st.number_input(
-            "% Cumplimiento Hprod / STD",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
-            format="%.2f"
-        )
+        with col2:
+            huevos_por_aa = st.number_input(
+                "H. Prod / AA",
+                min_value=0.0,
+                step=0.01,
+                key=f"haa_{lote}",
+                value=datos.get("HUEVOS_POR_AA", 0.0)
+            )
 
-    with col3:
-        pct_huevos_bomba = st.number_input(
-            "% Huevos Bomba",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
-            format="%.2f"
-        )
+            huevos_std_41 = st.number_input(
+                "Huevos STD (41 sem)",
+                min_value=0,
+                step=1,
+                key=f"std41_{lote}",
+                value=datos.get("HUEVOS_STD_41", 0)
+            )
 
-        # Campo fijo
-        st.text_input(
-            "Validación",
-            value="CERRADO",
-            disabled=True
-        )
+            pct_cumplimiento = st.number_input(
+                "% Cumplimiento",
+                min_value=0.0,
+                max_value=100.0,
+                step=0.1,
+                key=f"cumpl_{lote}",
+                value=datos.get("PCT_CUMPLIMIENTO", 0.0),
+                format="%.2f"
+            )
 
-    # Guardar en session_state (para exportar o validar luego)
-    st.session_state.datos_produccion = {
-        "ETAPA": etapa,
-        "EDAD_AVE": edad_ave,
-        "HUEVOS_SEM_41": huevos_sem_41,
-        "POBLACION_INICIAL": poblacion_inicial,
-        "HUEVOS_POR_AA": huevos_por_aa,
-        "HUEVOS_STD_41": huevos_std_41,
-        "PCT_CUMPLIMIENTO": pct_cumplimiento,
-        "PCT_HUEVOS_BOMBA": pct_huevos_bomba,
-        "VALIDACION": "CERRADO"
-    }
+        with col3:
+            pct_huevos_bomba = st.number_input(
+                "% Huevos Bomba",
+                min_value=0.0,
+                max_value=100.0,
+                step=0.1,
+                key=f"bomba_{lote}",
+                value=datos.get("PCT_HUEVOS_BOMBA", 0.0),
+                format="%.2f"
+            )
+
+            st.text_input("Validación", value="CERRADO", disabled=True, key=f"val_{lote}")
+
+        # ✅ Guardar POR LOTE
+        st.session_state.datos_productivos[lote] = {
+            "ETAPA": etapa,
+            "EDAD_AVE": edad_ave,
+            "HUEVOS_SEM_41": huevos_sem_41,
+            "POBLACION_INICIAL": poblacion_inicial,
+            "HUEVOS_POR_AA": huevos_por_aa,
+            "HUEVOS_STD_41": huevos_std_41,
+            "PCT_CUMPLIMIENTO": pct_cumplimiento,
+            "PCT_HUEVOS_BOMBA": pct_huevos_bomba,
+            "VALIDACION": "CERRADO"
+        }
 
 # =========================
-# DATOS PRODUCTIVOS – LEVANTE
+# DATOS PRODUCTIVOS – LEVANTE (POR LOTE)
 # =========================
 if tipo == "LEVANTE":
 
-    st.subheader("🐔 Información productiva – Levante")
+    st.subheader("🐔 Información productiva – Levante (por lote)")
 
-    # =========================
-    # HEMBRAS
-    # =========================
-    st.markdown("### ♀️ Hembras")
+    for lote in lotes:
+        st.markdown(f"## 🧬 Lote {lote}")
 
-    col1, col2, col3 = st.columns(3)
+        datos = st.session_state.datos_productivos.get(lote, {})
 
-    with col1:
-        edad_hembra = st.number_input(
-            "Edad ave al entregar a Prod (Hembras)",
-            min_value=0,
-            step=1
-        )
+        # =========================
+        # HEMBRAS
+        # =========================
+        st.markdown("### ♀️ Hembras")
 
-        uniformidad_hembras = st.number_input(
-            "Uniformidad Hembras (%)",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
-            format="%.2f"
-        )
+        col1, col2, col3 = st.columns(3)
 
-        nro_aves_entregadas_h = st.number_input(
-            "Nro Aves Entregadas a Prod (Hembras)",
-            min_value=0,
-            step=1
-        )
+        with col1:
+            edad_hembra = st.number_input(
+                "Edad ave al entregar a Prod (Hembras)",
+                min_value=0,
+                step=1,
+                key=f"edad_h_{lote}",
+                value=datos.get("HEMBRAS", {}).get("EDAD", 0)
+            )
 
-    with col2:
-        poblacion_inicial_h = st.number_input(
-            "Población Inicial (Hembras)",
-            min_value=0,
-            step=1
-        )
+            uniformidad_hembras = st.number_input(
+                "Uniformidad Hembras (%)",
+                min_value=0.0,
+                max_value=100.0,
+                step=0.1,
+                format="%.2f",
+                key=f"unif_h_{lote}",
+                value=datos.get("HEMBRAS", {}).get("UNIFORMIDAD", 0.0)
+            )
 
-        pct_cumpl_aves_h = st.number_input(
-            "% CUMP. Aves Entregadas (Hembras)",
-            step=0.1,
-            format="%.2f"
-        )
+            nro_aves_entregadas_h = st.number_input(
+                "Nro Aves Entregadas a Prod (Hembras)",
+                min_value=0,
+                step=1,
+                key=f"aves_h_{lote}",
+                value=datos.get("HEMBRAS", {}).get("AVES_ENTREGADAS", 0)
+            )
 
-    with col3:
-        peso_entrega_h = st.number_input(
-            "Peso Ave al entregar a Prod (Hembras)",
-            min_value=0.0,
-            step=0.001,
-            format="%.3f"
-        )
+        with col2:
+            poblacion_inicial_h = st.number_input(
+                "Población Inicial (Hembras)",
+                min_value=0,
+                step=1,
+                key=f"pob_h_{lote}",
+                value=datos.get("HEMBRAS", {}).get("POBLACION_INICIAL", 0)
+            )
 
-        peso_std_h = st.number_input(
-            "Peso Ave al entregar a Prod STD (Hembras)",
-            value=2.53,
-            step=0.001,
-            format="%.3f"
-        )
+            pct_cumpl_aves_h = st.number_input(
+                "% CUMP. Aves Entregadas (Hembras)",
+                step=0.1,
+                format="%.2f",
+                key=f"cump_aves_h_{lote}",
+                value=datos.get("HEMBRAS", {}).get("PCT_CUMP_AVES", 0.0)
+            )
 
-        pct_cumpl_peso_h = st.number_input(
-            "% CUMP. PESO (Hembras)",
-            step=0.1,     # acepta negativos
-            format="%.2f"
-        )
+        with col3:
+            peso_entrega_h = st.number_input(
+                "Peso Ave al entregar a Prod (Hembras)",
+                min_value=0.0,
+                step=0.001,
+                format="%.3f",
+                key=f"peso_h_{lote}",
+                value=datos.get("HEMBRAS", {}).get("PESO", 0.0)
+            )
 
-    # =========================
-    # MACHOS
-    # =========================
-    st.markdown("### ♂️ Machos")
+            peso_std_h = st.number_input(
+                "Peso Ave al entregar a Prod STD (Hembras)",
+                value=2.53,
+                step=0.001,
+                format="%.3f",
+                key=f"peso_std_h_{lote}"
+            )
 
-    col4, col5, col6 = st.columns(3)
+            pct_cumpl_peso_h = st.number_input(
+                "% CUMP. PESO (Hembras)",
+                step=0.1,
+                format="%.2f",
+                key=f"cump_peso_h_{lote}",
+                value=datos.get("HEMBRAS", {}).get("PCT_CUMP_PESO", 0.0)
+            )
 
-    with col4:
-        edad_macho = st.number_input(
-            "Edad ave al entregar a Prod (Machos)",
-            min_value=0,
-            step=1
-        )
+        # =========================
+        # MACHOS
+        # =========================
+        st.markdown("### ♂️ Machos")
 
-        uniformidad_machos = st.number_input(
-            "Uniformidad Machos (%)",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
-            format="%.2f"
-        )
+        col4, col5, col6 = st.columns(3)
 
-        nro_aves_entregadas_m = st.number_input(
-            "Nro Aves Entregadas a Prod (Machos)",
-            min_value=0,
-            step=1
-        )
+        with col4:
+            edad_macho = st.number_input(
+                "Edad ave al entregar a Prod (Machos)",
+                min_value=0,
+                step=1,
+                key=f"edad_m_{lote}",
+                value=datos.get("MACHOS", {}).get("EDAD", 0)
+            )
 
-    with col5:
-        poblacion_inicial_m = st.number_input(
-            "Población Inicial (Machos)",
-            min_value=0,
-            step=1
-        )
+            uniformidad_machos = st.number_input(
+                "Uniformidad Machos (%)",
+                min_value=0.0,
+                max_value=100.0,
+                step=0.1,
+                format="%.2f",
+                key=f"unif_m_{lote}",
+                value=datos.get("MACHOS", {}).get("UNIFORMIDAD", 0.0)
+            )
 
-    with col6:
-        peso_entrega_m = st.number_input(
-            "Peso Ave al entregar a Prod (Machos)",
-            min_value=0.0,
-            step=0.001,
-            format="%.3f"
-        )
+            nro_aves_entregadas_m = st.number_input(
+                "Nro Aves Entregadas a Prod (Machos)",
+                min_value=0,
+                step=1,
+                key=f"aves_m_{lote}",
+                value=datos.get("MACHOS", {}).get("AVES_ENTREGADAS", 0)
+            )
 
-        peso_std_m = st.number_input(
-            "Peso Ave al entregar a Prod STD (Machos)",
-            value=2.955,
-            step=0.001,
-            format="%.3f"
-        )
+        with col5:
+            poblacion_inicial_m = st.number_input(
+                "Población Inicial (Machos)",
+                min_value=0,
+                step=1,
+                key=f"pob_m_{lote}",
+                value=datos.get("MACHOS", {}).get("POBLACION_INICIAL", 0)
+            )
 
-        pct_cumpl_peso_m = st.number_input(
-            "% CUMP. PESO (Machos)",
-            step=0.1,
-            format="%.2f"
-        )
+        with col6:
+            peso_entrega_m = st.number_input(
+                "Peso Ave al entregar a Prod (Machos)",
+                min_value=0.0,
+                step=0.001,
+                format="%.3f",
+                key=f"peso_m_{lote}",
+                value=datos.get("MACHOS", {}).get("PESO", 0.0)
+            )
 
-    # =========================
-    # GUARDAR EN SESSION_STATE
-    # =========================
-    st.session_state.datos_levante = {
-        "HEMBRAS": {
-            "EDAD": edad_hembra,
-            "UNIFORMIDAD": uniformidad_hembras,
-            "AVES_ENTREGADAS": nro_aves_entregadas_h,
-            "POBLACION_INICIAL": poblacion_inicial_h,
-            "PCT_CUMP_AVES": pct_cumpl_aves_h,
-            "PESO": peso_entrega_h,
-            "PESO_STD": peso_std_h,
-            "PCT_CUMP_PESO": pct_cumpl_peso_h
-        },
-        "MACHOS": {
-            "EDAD": edad_macho,
-            "UNIFORMIDAD": uniformidad_machos,
-            "AVES_ENTREGADAS": nro_aves_entregadas_m,
-            "POBLACION_INICIAL": poblacion_inicial_m,
-            "PESO": peso_entrega_m,
-            "PESO_STD": peso_std_m,
-            "PCT_CUMP_PESO": pct_cumpl_peso_m
+            peso_std_m = st.number_input(
+                "Peso Ave al entregar a Prod STD (Machos)",
+                value=2.955,
+                step=0.001,
+                format="%.3f",
+                key=f"peso_std_m_{lote}"
+            )
+
+            pct_cumpl_peso_m = st.number_input(
+                "% CUMP. PESO (Machos)",
+                step=0.1,
+                format="%.2f",
+                key=f"cump_peso_m_{lote}",
+                value=datos.get("MACHOS", {}).get("PCT_CUMP_PESO", 0.0)
+            )
+
+        # =========================
+        # GUARDAR POR LOTE
+        # =========================
+        st.session_state.datos_productivos[lote] = {
+            "HEMBRAS": {
+                "EDAD": edad_hembra,
+                "UNIFORMIDAD": uniformidad_hembras,
+                "AVES_ENTREGADAS": nro_aves_entregadas_h,
+                "POBLACION_INICIAL": poblacion_inicial_h,
+                "PCT_CUMP_AVES": pct_cumpl_aves_h,
+                "PESO": peso_entrega_h,
+                "PESO_STD": peso_std_h,
+                "PCT_CUMP_PESO": pct_cumpl_peso_h
+            },
+            "MACHOS": {
+                "EDAD": edad_macho,
+                "UNIFORMIDAD": uniformidad_machos,
+                "AVES_ENTREGADAS": nro_aves_entregadas_m,
+                "POBLACION_INICIAL": poblacion_inicial_m,
+                "PESO": peso_entrega_m,
+                "PESO_STD": peso_std_m,
+                "PCT_CUMP_PESO": pct_cumpl_peso_m
+            }
         }
-    }
 
 
 # Lotes
@@ -1129,6 +1178,7 @@ with tab2:
 
             except Exception as e:
                 st.error("❌ Error al enviar el correo")
+
 
 
 
