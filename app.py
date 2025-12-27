@@ -416,6 +416,7 @@ if opcion_inicio == "➕ Iniciar desde cero":
         )
 
         st.success("✅ Cruce de trabajadores realizado")
+
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
     archivo_prev = st.file_uploader(
         "📂 Subir Excel previamente generado",
@@ -436,7 +437,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         # =========================
         # 1️⃣ ENCABEZADO
         # =========================
-        encabezado = raw.iloc[0:5, 0:2].copy()
+        encabezado = raw.iloc[0:4, 0:2].copy()
         encabezado.columns = ["CAMPO", "VALOR"]
         encabezado["CAMPO"] = encabezado["CAMPO"].astype(str).str.upper().str.strip()
 
@@ -455,54 +456,35 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         lotes = [l.strip() for l in lotes_txt.split(",")]
 
         # =========================
-        # 2️⃣ CONFIGURACIÓN POR LOTE (ROBUSTA, SOLO A–C)
+        # 2️⃣ CONFIGURACIÓN DE LOTES
         # =========================
-        fila_lotes = raw[
-            raw.iloc[:, 0].astype(str).str.strip().str.upper() == "LOTE"
-        ].index[0]
+        fila_lotes = raw[raw.iloc[:, 0] == "Lote"].index[0]
 
-        # Leer SOLO columnas A, B y C
-        df_lotes_raw = raw.iloc[fila_lotes + 1:, 0:3].copy()
-        df_lotes_raw.columns = ["LOTE", "GENETICA", "MONTO"]
-
-        # Limpieza fuerte
-        df_lotes_raw["LOTE"] = df_lotes_raw["LOTE"].astype(str).str.strip()
-        df_lotes_raw["GENETICA"] = (
-            df_lotes_raw["GENETICA"]
-            .astype(str)
-            .str.strip()
-            .str.upper()
+        df_lotes = pd.read_excel(
+            archivo_prev,
+            sheet_name="BONO_REPRODUCTORAS",
+            header=fila_lotes
         )
 
-        df_lotes_raw["MONTO"] = (
-            df_lotes_raw["MONTO"]
-            .astype(str)
-            .str.replace(",", "", regex=False)
-        )
-        df_lotes_raw["MONTO"] = pd.to_numeric(
-            df_lotes_raw["MONTO"], errors="coerce"
-        )
-
-        # Cortar al primer vacío (evita Hembras/Machos)
-        df_lotes_raw = df_lotes_raw[
-            df_lotes_raw["LOTE"].notna() & (df_lotes_raw["LOTE"] != "")
-        ]
-
-        # Construir config_lotes LIMPIO
         config_lotes = {}
-        for _, r in df_lotes_raw.iterrows():
-            lote = str(r["LOTE"]).strip()
-            config_lotes[lote] = {
-                "GENETICA": r["GENETICA"] if r["GENETICA"] else "ROSS",
-                "MONTO": float(r["MONTO"]) if pd.notna(r["MONTO"]) else 0.0
+        for _, r in df_lotes.iterrows():
+            if pd.isna(r["Lote"]):
+                continue
+
+            try:
+                monto = float(str(r["Monto S/"]).replace(",", "").strip())
+            except:
+                monto = 0.0
+
+            config_lotes[str(r["Lote"]).strip()] = {
+                "GENETICA": str(r["Genética"]).upper().strip(),
+                "MONTO": monto
             }
 
         # =========================
-        # 3️⃣ TABLA DE TRABAJADORES
+        # 3️⃣ TABLA TRABAJADORES
         # =========================
-        fila_tabla = raw[
-            raw.iloc[:, 0].astype(str).str.strip().str.upper() == "DNI"
-        ].index[0]
+        fila_tabla = raw[raw.iloc[:, 0] == "DNI"].index[0]
 
         df = pd.read_excel(
             archivo_prev,
@@ -526,6 +508,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
             st.session_state.datos_productivos = {}
 
+            # localizar las dos filas "Edad"
             idx_edades = raw[
                 raw.iloc[:, 0].astype(str).str.strip().str.upper() == "EDAD"
             ].index.tolist()
@@ -534,15 +517,19 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                 st.error("❌ No se detectaron bloques de Hembras y Machos")
                 st.stop()
 
-            inicio_h = idx_edades[0]   # Hembras
-            inicio_m = idx_edades[1]   # Machos
+            inicio_h = idx_edades[0]  # Hembras
+            inicio_m = idx_edades[1]  # Machos
 
+            # Hembras = 8 filas
             df_h = leer_bloque_invertido(raw, inicio_h, 8)
+
+            # Machos = 7 filas
             df_m = leer_bloque_invertido(raw, inicio_m, 7)
 
             for lote in df_h.columns:
                 st.session_state.datos_productivos.setdefault(lote, {})
 
+                # ♀️ HEMBRAS
                 st.session_state.datos_productivos[lote]["HEMBRAS"] = {
                     "EDAD": get_valor(df_h, 0, lote),
                     "UNIFORMIDAD": get_valor(df_h, 1, lote),
@@ -554,6 +541,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                     "PCT_CUMP_PESO": get_valor(df_h, 7, lote),
                 }
 
+                # ♂️ MACHOS
                 st.session_state.datos_productivos[lote]["MACHOS"] = {
                     "EDAD": get_valor(df_m, 0, lote),
                     "UNIFORMIDAD": get_valor(df_m, 1, lote),
@@ -565,7 +553,7 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                 }
 
         # =========================
-        # 5️⃣ SESSION STATE FINAL
+        # 5️⃣ SESSION STATE
         # =========================
         st.session_state.tabla = df.copy()
         st.session_state.df_edit = df.copy()
@@ -573,10 +561,8 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         st.session_state.lotes = lotes
         st.session_state.tipo = tipo
 
-        # 🔑 FLAG CRÍTICO PARA LA UI
-        st.session_state.cargado_desde_excel = True
-
         st.success("✅ Excel cargado y reconstruido correctamente")
+
 
 # =========================
 # SI NO HAY DATOS, DETENER
@@ -886,12 +872,14 @@ if tipo == "LEVANTE":
 
         st.success("✅ Datos de MACHOS guardados correctamente")
 
-# =========================
-# 🧬 CONFIGURACIÓN POR LOTE (CORREGIDO DEFINITIVO)
-# =========================
+# Configuración por lote
+if not confirmar_inicio:
+    st.info(
+        "🔒 Confirme Granja, Tipo de proceso y Lotes para continuar."
+    )
+    st.stop()
 st.subheader("🧬 Configuración por lote")
 
-# 🔒 Blindaje
 if "config_lotes" not in st.session_state:
     st.session_state.config_lotes = {}
 
@@ -900,35 +888,29 @@ cols = st.columns(len(lotes))
 
 for i, lote in enumerate(lotes):
     with cols[i]:
-
-        # 🔑 Lectura SEGURA
-        data_lote = config_lotes.get(lote, {})
-        valor_gen = data_lote.get("GENETICA", "ROSS")
-        valor_monto = data_lote.get("MONTO", 0.0)
+        valor_gen = config_lotes.get(lote, {}).get("GENETICA", "ROSS")
+        valor_monto = float(config_lotes.get(lote, {}).get("MONTO", 1000.0))
 
         genetica = st.text_input(
             f"Genética - Lote {lote}",
-            value=str(valor_gen),
-            key=f"gen_{lote}"
+            value=valor_gen,
+            key=f"gen_{lote}_v2"
         )
 
         monto = st.number_input(
             f"Monto S/ - Lote {lote}",
             min_value=0.0,
+            value=valor_monto,
             step=50.0,
-            value=float(valor_monto),
-            key=f"monto_{lote}"
+            key=f"monto_{lote}_v2"
         )
 
-        # 💾 Guardado
         config_lotes[lote] = {
-            "GENETICA": genetica.strip().upper(),
-            "MONTO": float(monto)
+            "GENETICA": genetica.upper(),
+            "MONTO": monto
         }
 
-# Persistir
 st.session_state.config_lotes = config_lotes
-
 
 # SESSION STATE tabla
 if "tabla" not in st.session_state:
