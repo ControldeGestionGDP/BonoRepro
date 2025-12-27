@@ -719,22 +719,8 @@ if tipo == "PRODUCCIÓN":
 
     st.subheader("🏭 Información productiva – Producción")
 
-    # ---------- ETAPA (DESPLEGABLE POR LOTE) ----------
-    st.markdown("### 🏷️ Etapa por lote")
-
-    etapas = {}
-    cols = st.columns(len(lotes))
-    for i, lote in enumerate(lotes):
-        with cols[i]:
-            etapas[lote] = st.selectbox(
-                f"Lote {lote}",
-                ["Primera Etapa", "Segunda Etapa"],
-                index=0 if st.session_state.datos_productivos.get(lote, {}).get("ETAPA", "Primera Etapa") == "Primera Etapa" else 1,
-                key=f"etapa_{lote}"
-            )
-
-    # ---------- CAMPOS NUMÉRICOS ----------
     campos_prod = {
+        "Etapa": "ETAPA",
         "Edad (sem)": "EDAD_AVE",
         "Huevos sem 41": "HUEVOS_SEM_41",
         "Población inicial": "POBLACION_INICIAL",
@@ -748,7 +734,7 @@ if tipo == "PRODUCCIÓN":
         campo: [
             st.session_state.datos_productivos
             .get(lote, {})
-            .get(key, 0)
+            .get(key, "Primera etapa" if key == "ETAPA" else 0)
             for lote in lotes
         ]
         for campo, key in campos_prod.items()
@@ -756,27 +742,28 @@ if tipo == "PRODUCCIÓN":
 
     df_prod = pd.DataFrame(data, index=lotes).T
 
+    # ===== FORMULARIO =====
+    with st.form("form_produccion_tabla"):
     df_edit = st.data_editor(
         df_prod,
         use_container_width=True,
         num_rows="fixed",
         column_config={
-            lote: st.column_config.NumberColumn()
+            lote: st.column_config.TextColumn()
             for lote in lotes
         }
     )
 
-    if st.button("💾 Guardar Producción"):
+    guardar = st.form_submit_button("💾 Guardar Producción")
+
+    # ===== Guardado =====
+    if guardar:
         for lote in lotes:
             st.session_state.datos_productivos.setdefault(lote, {})
-
-            # guardar etapa
-            st.session_state.datos_productivos[lote]["ETAPA"] = etapas[lote]
-
-            # guardar numéricos
             for campo, key in campos_prod.items():
-                st.session_state.datos_productivos[lote][key] = float(
-                    df_edit.loc[campo, lote]
+                valor = df_edit.loc[campo, lote]
+                st.session_state.datos_productivos[lote][key] = (
+                    valor if key == "ETAPA" else float(valor)
                 )
 
             st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
@@ -1633,10 +1620,3 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
-
-
-
-
-
-
-
