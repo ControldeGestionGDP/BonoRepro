@@ -720,7 +720,6 @@ if tipo == "PRODUCCIÓN":
     st.subheader("🏭 Información productiva – Producción")
 
     campos_prod = {
-        "Etapa": "ETAPA",
         "Edad (sem)": "EDAD_AVE",
         "Huevos sem 41": "HUEVOS_SEM_41",
         "Población inicial": "POBLACION_INICIAL",
@@ -731,74 +730,78 @@ if tipo == "PRODUCCIÓN":
     }
 
     # =========================
-    # 1️⃣ ETAPA (SEPARADO)
+    # ETAPA (SELECTBOX APARTE)
     # =========================
-    st.markdown("### 🔄 Etapa")
-
-    etapas = {
-        lote: st.session_state.datos_productivos
-        .get(lote, {})
-        .get("ETAPA", "Primera Etapa")
-        for lote in lotes
-    }
+    st.markdown("### 🔄 Etapa por lote")
 
     cols = st.columns(len(lotes))
     for i, lote in enumerate(lotes):
         with cols[i]:
-            etapas[lote] = st.selectbox(
-                f"Lote {lote}",
-                ["Primera Etapa", "Segunda Etapa"],
-                index=["Primera Etapa", "Segunda Etapa"].index(etapas[lote]),
-                key=f"etapa_{lote}"
+            etapa_actual = (
+                st.session_state.datos_productivos
+                .get(lote, {})
+                .get("ETAPA", "Primera Etapa")
             )
 
+            etapa = st.selectbox(
+                f"Lote {lote}",
+                ["Primera Etapa", "Segunda Etapa"],
+                index=["Primera Etapa", "Segunda Etapa"].index(etapa_actual),
+                key=f"etapa_prod_{lote}"
+            )
+
+            st.session_state.datos_productivos.setdefault(lote, {})
+            st.session_state.datos_productivos[lote]["ETAPA"] = etapa
+
     # =========================
-    # 2️⃣ RESTO DE VARIABLES (NUMÉRICAS)
+    # DATAFRAME NUMÉRICO (PERSISTENTE)
     # =========================
-    campos_num = {
-        k: v for k, v in campos_prod.items() if k != "Etapa"
-    }
+    if "df_prod_edit" not in st.session_state:
 
-    data_prod = {
-        campo: [
-            st.session_state.datos_productivos
-            .get(lote, {})
-            .get(key, 0)
-            for lote in lotes
-        ]
-        for campo, key in campos_num.items()
-    }
+        data_prod = {
+            campo: [
+                st.session_state.datos_productivos
+                .get(lote, {})
+                .get(key, 0)
+                for lote in lotes
+            ]
+            for campo, key in campos_prod.items()
+        }
 
-    df_prod = pd.DataFrame(data_prod, index=lotes).T
+        st.session_state.df_prod_edit = pd.DataFrame(
+            data_prod,
+            index=lotes
+        ).T
 
+    # =========================
+    # FORMULARIO (IGUAL A LEVANTE)
+    # =========================
     with st.form("form_produccion"):
 
-        df_prod_edit = st.data_editor(
-            df_prod,
+        df_edit = st.data_editor(
+            st.session_state.df_prod_edit,
             use_container_width=True,
             num_rows="fixed",
+            key="editor_produccion",  # 🔑 CLAVE CRÍTICA
             column_config={
                 lote: st.column_config.NumberColumn()
                 for lote in lotes
             }
         )
 
-        guardar_prod = st.form_submit_button("💾 Guardar Producción")
+        guardar = st.form_submit_button("💾 Guardar Producción")
 
     # =========================
-    # 3️⃣ GUARDADO
+    # GUARDADO
     # =========================
-    if guardar_prod:
+    if guardar:
+        st.session_state.df_prod_edit = df_edit.copy()
+
         for lote in lotes:
             st.session_state.datos_productivos.setdefault(lote, {})
-
-            # Guardar etapa
-            st.session_state.datos_productivos[lote]["ETAPA"] = etapas[lote]
-
-            # Guardar numéricos
-            for campo, key in campos_num.items():
+            for campo, key in campos_prod.items():
                 st.session_state.datos_productivos[lote][key] = float(
-                    df_prod_edit.loc[campo, lote]
+                    df_edit.loc[campo, lote]
                 )
 
             st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
@@ -1655,6 +1658,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
