@@ -734,7 +734,7 @@ if tipo == "PRODUCCIÓN":
         campo: [
             st.session_state.datos_productivos
             .get(lote, {})
-            .get(key, "Primera etapa" if key == "ETAPA" else 0)
+            .get(key, "Primera Etapa" if key == "ETAPA" else 0)
             for lote in lotes
         ]
         for campo, key in campos_prod.items()
@@ -742,13 +742,20 @@ if tipo == "PRODUCCIÓN":
 
     df_prod = pd.DataFrame(data, index=lotes).T
 
-    # ===== EDICIÓN =====
+    # ===== EDICIÓN (ETAPA DESPLEGABLE) =====
     df_edit = st.data_editor(
         df_prod,
         use_container_width=True,
         num_rows="fixed",
         column_config={
-            lote: st.column_config.TextColumn()
+            lote: (
+                st.column_config.SelectboxColumn(
+                    "Etapa",
+                    options=["Primera Etapa", "Segunda Etapa"]
+                )
+                if "Etapa" in df_prod.index
+                else st.column_config.NumberColumn()
+            )
             for lote in lotes
         }
     )
@@ -1619,5 +1626,6 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
