@@ -742,9 +742,7 @@ if tipo == "PRODUCCIÓN":
 
     df_prod = pd.DataFrame(data, index=lotes).T
 
-    # ===== FORMULARIO =====
     with st.form("form_produccion_tabla"):
-
         df_edit = st.data_editor(
             df_prod,
             use_container_width=True,
@@ -764,7 +762,6 @@ if tipo == "PRODUCCIÓN":
 
         guardar = st.form_submit_button("💾 Guardar Producción")
 
-    # ===== GUARDADO =====
     if guardar:
         for lote in lotes:
             st.session_state.datos_productivos.setdefault(lote, {})
@@ -1629,6 +1626,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
