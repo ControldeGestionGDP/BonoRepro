@@ -742,32 +742,32 @@ if tipo == "PRODUCCIÓN":
 
     df_prod = pd.DataFrame(data, index=lotes).T
 
-    # ===== FORMULARIO =====
+    # ===== EDICIÓN =====
     df_edit = st.data_editor(
-    df_prod,
-    use_container_width=True,
-    num_rows="fixed",
-    column_config={
-        lote: st.column_config.TextColumn()
-        for lote in lotes
-    }
-)
+        df_prod,
+        use_container_width=True,
+        num_rows="fixed",
+        column_config={
+            lote: st.column_config.TextColumn()
+            for lote in lotes
+        }
+    )
 
-guardar = st.button("💾 Guardar Producción")
+    guardar = st.button("💾 Guardar Producción")
 
-if guardar:
-    for lote in lotes:
-        st.session_state.datos_productivos.setdefault(lote, {})
-        for campo, key in campos_prod.items():
-            valor = df_edit.loc[campo, lote]
-            st.session_state.datos_productivos[lote][key] = (
-                valor if key == "ETAPA" else float(valor)
-            )
+    # ===== GUARDADO =====
+    if guardar:
+        for lote in lotes:
+            st.session_state.datos_productivos.setdefault(lote, {})
+            for campo, key in campos_prod.items():
+                valor = df_edit.loc[campo, lote]
+                st.session_state.datos_productivos[lote][key] = (
+                    valor if key == "ETAPA" else float(valor)
+                )
 
-        st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
+            st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
 
-    st.success("✅ Datos de PRODUCCIÓN guardados correctamente")
-
+        st.success("✅ Datos de PRODUCCIÓN guardados correctamente")
 
 # =========================
 # DATOS PRODUCTIVOS – LEVANTE (TABLAS INVERTIDAS)
@@ -1619,4 +1619,5 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
