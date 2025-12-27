@@ -730,20 +730,47 @@ if tipo == "PRODUCCIÓN":
         "% Huevos bomba": "PCT_HUEVOS_BOMBA",
     }
 
-    # ---------- DATA ----------
+    # =========================
+    # 1️⃣ ETAPA (SEPARADO)
+    # =========================
+    st.markdown("### 🔄 Etapa")
+
+    etapas = {
+        lote: st.session_state.datos_productivos
+        .get(lote, {})
+        .get("ETAPA", "Primera Etapa")
+        for lote in lotes
+    }
+
+    cols = st.columns(len(lotes))
+    for i, lote in enumerate(lotes):
+        with cols[i]:
+            etapas[lote] = st.selectbox(
+                f"Lote {lote}",
+                ["Primera Etapa", "Segunda Etapa"],
+                index=["Primera Etapa", "Segunda Etapa"].index(etapas[lote]),
+                key=f"etapa_{lote}"
+            )
+
+    # =========================
+    # 2️⃣ RESTO DE VARIABLES (NUMÉRICAS)
+    # =========================
+    campos_num = {
+        k: v for k, v in campos_prod.items() if k != "Etapa"
+    }
+
     data_prod = {
         campo: [
             st.session_state.datos_productivos
             .get(lote, {})
-            .get(key, "Primera Etapa" if key == "ETAPA" else 0)
+            .get(key, 0)
             for lote in lotes
         ]
-        for campo, key in campos_prod.items()
+        for campo, key in campos_num.items()
     }
 
     df_prod = pd.DataFrame(data_prod, index=lotes).T
 
-    # ---------- FORMULARIO (MISMO PATRÓN QUE LEVANTE) ----------
     with st.form("form_produccion"):
 
         df_prod_edit = st.data_editor(
@@ -751,27 +778,27 @@ if tipo == "PRODUCCIÓN":
             use_container_width=True,
             num_rows="fixed",
             column_config={
-                lote: st.column_config.SelectboxColumn(
-                    "Etapa",
-                    options=["Primera Etapa", "Segunda Etapa"]
-                )
-                if "Etapa" in df_prod.index
-                else st.column_config.NumberColumn()
+                lote: st.column_config.NumberColumn()
                 for lote in lotes
             }
         )
 
         guardar_prod = st.form_submit_button("💾 Guardar Producción")
 
-    # ---------- GUARDADO ----------
+    # =========================
+    # 3️⃣ GUARDADO
+    # =========================
     if guardar_prod:
         for lote in lotes:
             st.session_state.datos_productivos.setdefault(lote, {})
 
-            for campo, key in campos_prod.items():
-                valor = df_prod_edit.loc[campo, lote]
-                st.session_state.datos_productivos[lote][key] = (
-                    valor if key == "ETAPA" else float(valor)
+            # Guardar etapa
+            st.session_state.datos_productivos[lote]["ETAPA"] = etapas[lote]
+
+            # Guardar numéricos
+            for campo, key in campos_num.items():
+                st.session_state.datos_productivos[lote][key] = float(
+                    df_prod_edit.loc[campo, lote]
                 )
 
             st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
@@ -1628,6 +1655,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
