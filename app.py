@@ -340,46 +340,6 @@ def factor_faltas(f):
     return DESCUENTO_FALTAS.get(f, 0.50)
 
 # =========================
-# HELPER – LECTURA DE TABLAS INVERTIDAS (LEVANTE)
-# =========================
-def leer_bloque_invertido(raw, fila_inicio, n_filas):
-    """
-    raw        : dataframe completo sin header
-    fila_inicio: fila donde está 'Edad'
-    n_filas    : número de filas del bloque
-    """
-
-    # encabezados (lotes) están UNA FILA ARRIBA
-    lotes = (
-        raw.iloc[fila_inicio - 1, 1:]
-        .astype(str)
-        .str.replace(".0", "", regex=False)
-        .str.strip()
-    )
-
-    bloque = raw.iloc[fila_inicio:fila_inicio + n_filas].copy()
-
-    data = bloque.iloc[:, 1:]
-    data.columns = lotes
-
-    data.index = (
-        bloque.iloc[:, 0]
-        .astype(str)
-        .str.strip()
-    )
-
-    return data
-
-
-def get_valor(df, fila_idx, col, default=0.0):
-    try:
-        v = df.iloc[fila_idx][col]
-        return float(v) if pd.notna(v) else default
-    except:
-        return default
-
-
-# =========================
 # CARGA DE ARCHIVOS SEGÚN OPCIÓN
 # =========================
 df = None
@@ -388,7 +348,7 @@ df_base = None
 if opcion_inicio == "➕ Iniciar desde cero":
     archivo_dni = st.file_uploader("📄 Excel con DNIs", type=["xlsx"])
     archivo_base = st.file_uploader("📊 Base de trabajadores", type=["xlsx"])
-
+    
     if archivo_dni and archivo_base:
         df_dni = pd.read_excel(archivo_dni, dtype=str)
         df_base = pd.read_excel(archivo_base, dtype=str)
@@ -410,36 +370,21 @@ if opcion_inicio == "➕ Iniciar desde cero":
         df_base = df_base.drop_duplicates("DNI")
 
         df = df_dni.merge(
-            df_base[["DNI", "NOMBRE COMPLETO", "CARGO"]],
+            df_base[["DNI","NOMBRE COMPLETO","CARGO"]],
             on="DNI",
             how="left"
         )
-
         st.success("✅ Cruce de trabajadores realizado")
 
 elif opcion_inicio == "📂 Cargar Excel previamente generado":
-    archivo_prev = st.file_uploader(
-        "📂 Subir Excel previamente generado",
-        type=["xlsx"]
-    )
-
+    archivo_prev = st.file_uploader("📂 Subir Excel previamente generado", type=["xlsx"])
     if archivo_prev:
+        raw = pd.read_excel(archivo_prev, sheet_name="BONO_REPRODUCTORAS", header=None)
 
-        # =========================
-        # LECTURA RAW
-        # =========================
-        raw = pd.read_excel(
-            archivo_prev,
-            sheet_name="BONO_REPRODUCTORAS",
-            header=None
-        )
-
-        # =========================
-        # 1️⃣ ENCABEZADO
-        # =========================
-        encabezado = raw.iloc[0:4, 0:2].copy()
+        # ---------- 1️⃣ Encabezado ----------
+        encabezado = raw.iloc[0:4, 0:2]
         encabezado.columns = ["CAMPO", "VALOR"]
-        encabezado["CAMPO"] = encabezado["CAMPO"].astype(str).str.upper().str.strip()
+        encabezado["CAMPO"] = encabezado["CAMPO"].str.upper()
 
         st.session_state.granja_seleccionada = encabezado.loc[
             encabezado["CAMPO"] == "GRANJA", "VALOR"
@@ -455,11 +400,15 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
         lotes = [l.strip() for l in lotes_txt.split(",")]
 
-        # =========================
-        # 2️⃣ CONFIGURACIÓN DE LOTES
-        # =========================
-        fila_lotes = raw[raw.iloc[:, 0] == "Lote"].index[0]
-
+        # ---------- 2️⃣ Configuración de lotes ----------
+        fila_lotes = raw[raw.iloc[:,0] == "Lote"].index[0]
+        df_lotes = pd.read_excel(
+            archivo_prev,
+            sheet_name="BONO_REPRODUCTORAS",
+            header=fila_lotes
+        )
+                # ---------- 2️⃣ Configuración de lotes ----------
+        fila_lotes = raw[raw.iloc[:,0] == "Lote"].index[0]
         df_lotes = pd.read_excel(
             archivo_prev,
             sheet_name="BONO_REPRODUCTORAS",
@@ -468,11 +417,18 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
 
         config_lotes = {}
         for _, r in df_lotes.iterrows():
+
             if pd.isna(r["Lote"]):
-                continue
+                continue  # salta filas vacías
+
+            monto_limpio = (
+                str(r["Monto S/"])
+                .replace(",", "")
+                .strip()
+            )
 
             try:
-                monto = float(str(r["Monto S/"]).replace(",", "").strip())
+                monto = float(monto_limpio)
             except:
                 monto = 0.0
 
@@ -481,11 +437,8 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
                 "MONTO": monto
             }
 
-        # =========================
-        # 3️⃣ TABLA TRABAJADORES
-        # =========================
-        fila_tabla = raw[raw.iloc[:, 0] == "DNI"].index[0]
-
+        # ---------- 3️⃣ Tabla trabajadores ----------
+        fila_tabla = raw[raw.iloc[:,0] == "DNI"].index[0]
         df = pd.read_excel(
             archivo_prev,
             sheet_name="BONO_REPRODUCTORAS",
@@ -497,64 +450,11 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         df["DNI"] = (
             df["DNI"]
             .str.replace("'", "")
-            .str.replace(".0", "", regex=False)
+            .str.replace(".0","",regex=False)
             .str.zfill(8)
         )
 
-        # =========================
-        # 4️⃣ DATOS PRODUCTIVOS – LEVANTE
-        # =========================
-        if tipo == "LEVANTE":
-
-            st.session_state.datos_productivos = {}
-
-            # localizar las dos filas "Edad"
-            idx_edades = raw[
-                raw.iloc[:, 0].astype(str).str.strip().str.upper() == "EDAD"
-            ].index.tolist()
-
-            if len(idx_edades) < 2:
-                st.error("❌ No se detectaron bloques de Hembras y Machos")
-                st.stop()
-
-            inicio_h = idx_edades[0]  # Hembras
-            inicio_m = idx_edades[1]  # Machos
-
-            # Hembras = 8 filas
-            df_h = leer_bloque_invertido(raw, inicio_h, 8)
-
-            # Machos = 7 filas
-            df_m = leer_bloque_invertido(raw, inicio_m, 7)
-
-            for lote in df_h.columns:
-                st.session_state.datos_productivos.setdefault(lote, {})
-
-                # ♀️ HEMBRAS
-                st.session_state.datos_productivos[lote]["HEMBRAS"] = {
-                    "EDAD": get_valor(df_h, 0, lote),
-                    "UNIFORMIDAD": get_valor(df_h, 1, lote),
-                    "AVES_ENTREGADAS": get_valor(df_h, 2, lote),
-                    "POBLACION_INICIAL": get_valor(df_h, 3, lote),
-                    "PCT_CUMP_AVES": get_valor(df_h, 4, lote),
-                    "PESO": get_valor(df_h, 5, lote),
-                    "PESO_STD": get_valor(df_h, 6, lote),
-                    "PCT_CUMP_PESO": get_valor(df_h, 7, lote),
-                }
-
-                # ♂️ MACHOS
-                st.session_state.datos_productivos[lote]["MACHOS"] = {
-                    "EDAD": get_valor(df_m, 0, lote),
-                    "UNIFORMIDAD": get_valor(df_m, 1, lote),
-                    "AVES_ENTREGADAS": get_valor(df_m, 2, lote),
-                    "POBLACION_INICIAL": get_valor(df_m, 3, lote),
-                    "PESO": get_valor(df_m, 4, lote),
-                    "PESO_STD": get_valor(df_m, 5, lote),
-                    "PCT_CUMP_PESO": get_valor(df_m, 6, lote),
-                }
-
-        # =========================
-        # 5️⃣ SESSION STATE
-        # =========================
+        # Guardar en session_state
         st.session_state.tabla = df.copy()
         st.session_state.df_edit = df.copy()
         st.session_state.config_lotes = config_lotes
@@ -562,7 +462,6 @@ elif opcion_inicio == "📂 Cargar Excel previamente generado":
         st.session_state.tipo = tipo
 
         st.success("✅ Excel cargado y reconstruido correctamente")
-
 
 # =========================
 # SI NO HAY DATOS, DETENER
