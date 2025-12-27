@@ -743,24 +743,27 @@ if tipo == "PRODUCCIÓN":
     df_prod = pd.DataFrame(data, index=lotes).T
 
     with st.form("form_produccion_tabla"):
-        df_edit = st.data_editor(
-            df_prod,
-            use_container_width=True,
-            num_rows="fixed",
-            column_config={
-                lote: (
-                    st.column_config.SelectboxColumn(
-                        "Etapa",
-                        options=["Primera Etapa", "Segunda Etapa"]
-                    )
-                    if "Etapa" in df_prod.index
-                    else st.column_config.NumberColumn()
-                )
-                for lote in lotes
-            }
-        )
+    st.write("")  # 🔑 línea ancla para evitar IndentationError
 
-        guardar = st.form_submit_button("💾 Guardar Producción")
+    df_edit = st.data_editor(
+        df_prod,
+        use_container_width=True,
+        num_rows="fixed",
+        column_config={
+            lote: (
+                st.column_config.SelectboxColumn(
+                    "Etapa",
+                    options=["Primera Etapa", "Segunda Etapa"]
+                )
+                if "Etapa" in df_prod.index
+                else st.column_config.NumberColumn()
+            )
+            for lote in lotes
+        }
+    )
+
+    guardar = st.form_submit_button("💾 Guardar Producción")
+
 
     if guardar:
         for lote in lotes:
@@ -1626,20 +1629,6 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
