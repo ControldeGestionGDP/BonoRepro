@@ -734,7 +734,7 @@ if tipo == "PRODUCCIÓN":
         campo: [
             st.session_state.datos_productivos
             .get(lote, {})
-            .get(key, "Primera etapa" if key == "ETAPA" else 0)
+            .get(key, "Primera Etapa" if key == "ETAPA" else 0)
             for lote in lotes
         ]
         for campo, key in campos_prod.items()
@@ -745,22 +745,38 @@ if tipo == "PRODUCCIÓN":
     # ===== FORMULARIO =====
     with st.form("form_produccion_tabla"):
 
-    df_edit = st.data_editor(
-        df_prod,
-        use_container_width=True,
-        num_rows="fixed",
-        column_config={
-            lote: st.column_config.SelectboxColumn(
-                options=["Primera Etapa", "Segunda Etapa"]
-            )
-            if "Etapa" in df_prod.index else
-            st.column_config.NumberColumn()
-            for lote in lotes
-        }
-    )
+        df_edit = st.data_editor(
+            df_prod,
+            use_container_width=True,
+            num_rows="fixed",
+            column_config={
+                lote: (
+                    st.column_config.SelectboxColumn(
+                        "Etapa",
+                        options=["Primera Etapa", "Segunda Etapa"]
+                    )
+                    if "Etapa" in df_prod.index
+                    else st.column_config.NumberColumn()
+                )
+                for lote in lotes
+            }
+        )
 
-    guardar = st.form_submit_button("💾 Guardar Producción")
+        guardar = st.form_submit_button("💾 Guardar Producción")
 
+    # ===== GUARDADO =====
+    if guardar:
+        for lote in lotes:
+            st.session_state.datos_productivos.setdefault(lote, {})
+            for campo, key in campos_prod.items():
+                valor = df_edit.loc[campo, lote]
+                st.session_state.datos_productivos[lote][key] = (
+                    valor if key == "ETAPA" else float(valor)
+                )
+
+            st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
+
+        st.success("✅ Datos de PRODUCCIÓN guardados correctamente")
 
     # ===== Guardado =====
     if guardar:
@@ -1626,6 +1642,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
