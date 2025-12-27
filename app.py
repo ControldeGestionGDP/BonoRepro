@@ -755,19 +755,19 @@ if tipo == "PRODUCCIÓN":
 
 guardar = st.button("💾 Guardar Producción")
 
-    # ===== Guardado =====
-    if guardar:
-        for lote in lotes:
-            st.session_state.datos_productivos.setdefault(lote, {})
-            for campo, key in campos_prod.items():
-                valor = df_edit.loc[campo, lote]
-                st.session_state.datos_productivos[lote][key] = (
-                    valor if key == "ETAPA" else float(valor)
-                )
+if guardar:
+    for lote in lotes:
+        st.session_state.datos_productivos.setdefault(lote, {})
+        for campo, key in campos_prod.items():
+            valor = df_edit.loc[campo, lote]
+            st.session_state.datos_productivos[lote][key] = (
+                valor if key == "ETAPA" else float(valor)
+            )
 
-            st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
+        st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
 
-        st.success("✅ Datos de PRODUCCIÓN guardados correctamente")
+    st.success("✅ Datos de PRODUCCIÓN guardados correctamente")
+
 
 # =========================
 # DATOS PRODUCTIVOS – LEVANTE (TABLAS INVERTIDAS)
@@ -1619,3 +1619,4 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
