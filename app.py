@@ -722,22 +722,22 @@ if tipo == "PRODUCCIÓN":
     # ---------- ETAPA (DESPLEGABLE POR LOTE) ----------
     st.markdown("### 🏷️ Etapa por lote")
 
-    etapas = {}
-    cols = st.columns(len(lotes))
+    if "etapas_prod" not in st.session_state:
+        st.session_state.etapas_prod = {
+            lote: st.session_state.datos_productivos
+            .get(lote, {})
+            .get("ETAPA", "Primera Etapa")
+            for lote in lotes
+        }
 
+    cols = st.columns(len(lotes))
     for i, lote in enumerate(lotes):
         with cols[i]:
-            etapas[lote] = st.selectbox(
+            st.session_state.etapas_prod[lote] = st.selectbox(
                 f"Lote {lote}",
                 ["Primera Etapa", "Segunda Etapa"],
-                index=(
-                    0
-                    if st.session_state.datos_productivos
-                    .get(lote, {})
-                    .get("ETAPA", "Primera Etapa") == "Primera Etapa"
-                    else 1
-                ),
-                key=f"etapa_{lote}"
+                index=0 if st.session_state.etapas_prod[lote] == "Primera Etapa" else 1,
+                key=f"etapa_prod_{lote}"
             )
 
     # ---------- CAMPOS NUMÉRICOS ----------
@@ -751,36 +751,42 @@ if tipo == "PRODUCCIÓN":
         "% Huevos bomba": "PCT_HUEVOS_BOMBA",
     }
 
-    data = {
-        campo: [
-            st.session_state.datos_productivos
-            .get(lote, {})
-            .get(key, 0)
-            for lote in lotes
-        ]
-        for campo, key in campos_prod.items()
-    }
+    if "df_prod_edit" not in st.session_state:
+        data = {
+            campo: [
+                st.session_state.datos_productivos
+                .get(lote, {})
+                .get(key, 0)
+                for lote in lotes
+            ]
+            for campo, key in campos_prod.items()
+        }
+        st.session_state.df_prod_edit = pd.DataFrame(data, index=lotes).T
 
-    df_prod = pd.DataFrame(data, index=lotes).T
-
-    # ---------- TABLA EDITABLE ----------
+    # ---------- TABLA EDITABLE (FORZADA) ----------
     df_edit = st.data_editor(
-        df_prod,
+        st.session_state.df_prod_edit,
         use_container_width=True,
-        num_rows="fixed"
+        num_rows="fixed",
+        editable=True,              # 🔑 CLAVE
+        key="data_editor_produccion"
     )
 
     guardar = st.button("💾 Guardar Producción")
 
     # ---------- GUARDADO ----------
     if guardar:
+        st.session_state.df_prod_edit = df_edit.copy()
+
         for lote in lotes:
             st.session_state.datos_productivos.setdefault(lote, {})
 
-            # guardar etapa
-            st.session_state.datos_productivos[lote]["ETAPA"] = etapas[lote]
+            # Etapa
+            st.session_state.datos_productivos[lote]["ETAPA"] = (
+                st.session_state.etapas_prod[lote]
+            )
 
-            # guardar numéricos
+            # Numéricos
             for campo, key in campos_prod.items():
                 st.session_state.datos_productivos[lote][key] = float(
                     df_edit.loc[campo, lote]
@@ -1640,6 +1646,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
