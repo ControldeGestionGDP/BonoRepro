@@ -713,35 +713,14 @@ if "datos_productivos" not in st.session_state:
     st.session_state.datos_productivos = {}
 
 # =========================
-# ETAPA Y DATOS PRODUCTIVOS (PRODUCCIÓN)
+# ETAPA Y DATOS PRODUCTIVOS (PRODUCCIÓN – TABLA INVERTIDA)
 # =========================
 if tipo == "PRODUCCIÓN":
 
     st.subheader("🏭 Información productiva – Producción")
 
-    # ---------- ETAPA (DESPLEGABLE POR LOTE) ----------
-    st.markdown("### 🏷️ Etapa por lote")
-
-    if "etapas_prod" not in st.session_state:
-        st.session_state.etapas_prod = {
-            lote: st.session_state.datos_productivos
-            .get(lote, {})
-            .get("ETAPA", "Primera Etapa")
-            for lote in lotes
-        }
-
-    cols = st.columns(len(lotes))
-    for i, lote in enumerate(lotes):
-        with cols[i]:
-            st.session_state.etapas_prod[lote] = st.selectbox(
-                f"Lote {lote}",
-                ["Primera Etapa", "Segunda Etapa"],
-                index=0 if st.session_state.etapas_prod[lote] == "Primera Etapa" else 1,
-                key=f"etapa_prod_{lote}"
-            )
-
-    # ---------- CAMPOS NUMÉRICOS ----------
     campos_prod = {
+        "Etapa": "ETAPA",
         "Edad (sem)": "EDAD_AVE",
         "Huevos sem 41": "HUEVOS_SEM_41",
         "Población inicial": "POBLACION_INICIAL",
@@ -751,45 +730,48 @@ if tipo == "PRODUCCIÓN":
         "% Huevos bomba": "PCT_HUEVOS_BOMBA",
     }
 
-    if "df_prod_edit" not in st.session_state:
-        data = {
-            campo: [
-                st.session_state.datos_productivos
-                .get(lote, {})
-                .get(key, 0)
+    # ---------- DATA ----------
+    data_prod = {
+        campo: [
+            st.session_state.datos_productivos
+            .get(lote, {})
+            .get(key, "Primera Etapa" if key == "ETAPA" else 0)
+            for lote in lotes
+        ]
+        for campo, key in campos_prod.items()
+    }
+
+    df_prod = pd.DataFrame(data_prod, index=lotes).T
+
+    # ---------- FORMULARIO (MISMO PATRÓN QUE LEVANTE) ----------
+    with st.form("form_produccion"):
+
+        df_prod_edit = st.data_editor(
+            df_prod,
+            use_container_width=True,
+            num_rows="fixed",
+            column_config={
+                lote: st.column_config.SelectboxColumn(
+                    "Etapa",
+                    options=["Primera Etapa", "Segunda Etapa"]
+                )
+                if "Etapa" in df_prod.index
+                else st.column_config.NumberColumn()
                 for lote in lotes
-            ]
-            for campo, key in campos_prod.items()
-        }
-        st.session_state.df_prod_edit = pd.DataFrame(data, index=lotes).T
+            }
+        )
 
-    # ---------- TABLA EDITABLE (FORZADA) ----------
-    df_edit = st.data_editor(
-        st.session_state.df_prod_edit,
-        use_container_width=True,
-        num_rows="fixed",
-        editable=True,              # 🔑 CLAVE
-        key="data_editor_produccion"
-    )
-
-    guardar = st.button("💾 Guardar Producción")
+        guardar_prod = st.form_submit_button("💾 Guardar Producción")
 
     # ---------- GUARDADO ----------
-    if guardar:
-        st.session_state.df_prod_edit = df_edit.copy()
-
+    if guardar_prod:
         for lote in lotes:
             st.session_state.datos_productivos.setdefault(lote, {})
 
-            # Etapa
-            st.session_state.datos_productivos[lote]["ETAPA"] = (
-                st.session_state.etapas_prod[lote]
-            )
-
-            # Numéricos
             for campo, key in campos_prod.items():
-                st.session_state.datos_productivos[lote][key] = float(
-                    df_edit.loc[campo, lote]
+                valor = df_prod_edit.loc[campo, lote]
+                st.session_state.datos_productivos[lote][key] = (
+                    valor if key == "ETAPA" else float(valor)
                 )
 
             st.session_state.datos_productivos[lote]["VALIDACION"] = "CERRADO"
@@ -1646,6 +1628,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
