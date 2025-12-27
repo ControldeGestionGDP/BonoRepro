@@ -778,6 +778,7 @@ if tipo == "PRODUCCIÓN":
 
         st.success("✅ Datos de PRODUCCIÓN guardados correctamente")
 
+
 # =========================
 # DATOS PRODUCTIVOS – LEVANTE (TABLAS INVERTIDAS)
 # =========================
@@ -1628,6 +1629,7 @@ with tab2:
 
             except Exception as e:
                 st.error(f"❌ Error al enviar el correo: {e}")
+
 
 
 
